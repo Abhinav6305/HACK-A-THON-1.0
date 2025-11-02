@@ -44,151 +44,155 @@ def home():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        team_name = request.form['team_name']
-        leader_name = request.form['leader_name']
-        leader_email = request.form['leader_email']
-        leader_phone = request.form['leader_phone']
-        leader_company = request.form['leader_company']
-        team_size = int(request.form['team_size'])
-        members = []
-        for i in range(1, team_size):
-            member_name = request.form.get(f'member_{i}_name')
-            member_email = request.form.get(f'member_{i}_email')
-            member_phone = request.form.get(f'member_{i}_phone')
-            member_company = request.form.get(f'member_{i}_company')
-            if member_name:
-                members.append({
-                    'name': member_name,
-                    'email': member_email,
-                    'phone': member_phone,
-                    'company': member_company
-                })
+        try:
+            team_name = request.form['team_name']
+            leader_name = request.form['leader_name']
+            leader_email = request.form['leader_email']
+            leader_phone = request.form['leader_phone']
+            leader_company = request.form['leader_company']
+            team_size = int(request.form['team_size'])
+            members = []
+            for i in range(1, team_size):
+                member_name = request.form.get(f'member_{i}_name')
+                member_email = request.form.get(f'member_{i}_email')
+                member_phone = request.form.get(f'member_{i}_phone')
+                member_company = request.form.get(f'member_{i}_company')
+                if member_name:
+                    members.append({
+                        'name': member_name,
+                        'email': member_email,
+                        'phone': member_phone,
+                        'company': member_company
+                    })
 
-        # Check unique email
-        all_emails = [leader_email] + [m['email'] for m in members]
-        for email in all_emails:
-            if User.query.filter_by(email=email).first():
-                flash(f'Email {email} is already registered.')
+            # Check unique email
+            all_emails = [leader_email] + [m['email'] for m in members]
+            for email in all_emails:
+                if User.query.filter_by(email=email).first():
+                    flash(f'Email {email} is already registered.')
+                    return redirect(url_for('register'))
+
+            # Check unique team name
+            if Team.query.filter_by(team_name=team_name).first():
+                flash(f'Team name "{team_name}" is already taken. Please choose a different name.')
                 return redirect(url_for('register'))
 
-        # Check unique team name
-        if Team.query.filter_by(team_name=team_name).first():
-            flash(f'Team name "{team_name}" is already taken. Please choose a different name.')
-            return redirect(url_for('register'))
+            abstract = request.files['abstract']
+            if not abstract or abstract.filename == '':
+                flash('Abstract file is required.')
+                return redirect(url_for('register'))
 
-        abstract = request.files['abstract']
-        if not abstract or abstract.filename == '':
-            flash('Abstract file is required.')
-            return redirect(url_for('register'))
+            # Check file type and size
+            allowed_extensions = {'pdf'}
+            if '.' not in abstract.filename or abstract.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
+                flash('Only PDF files are allowed.')
+                return redirect(url_for('register'))
+            if abstract.content_length > 10 * 1024 * 1024:  # 10MB
+                flash('File size must be less than 10MB.')
+                return redirect(url_for('register'))
 
-        # Check file type and size
-        allowed_extensions = {'pdf'}
-        if '.' not in abstract.filename or abstract.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
-            flash('Only PDF files are allowed.')
-            return redirect(url_for('register'))
-        if abstract.content_length > 10 * 1024 * 1024:  # 10MB
-            flash('File size must be less than 10MB.')
-            return redirect(url_for('register'))
+            filename = secure_filename(abstract.filename)
+            abstract.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
-        filename = secure_filename(abstract.filename)
-        abstract.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            # Create user for leader (no password since no password registration)
+            leader = User(name=leader_name, email=leader_email, phone=leader_phone, company=leader_company, role='participant')
+            db.session.add(leader)
+            db.session.commit()
+            leader_id = leader.user_id
 
-        # Create user for leader (no password since no password registration)
-        leader = User(name=leader_name, email=leader_email, phone=leader_phone, company=leader_company, role='participant')
-        db.session.add(leader)
-        db.session.commit()
-        leader_id = leader.user_id
+            # Handle payment details
+            transaction_id = request.form['transaction_id']
+            transaction_photo = request.files['transaction_photo']
+            # Upload to OneDrive and get link
+            transaction_photo_link = upload_to_onedrive(transaction_photo)
+            if not transaction_photo_link:
+                # Fallback: save locally and provide local link
+                transaction_photo_filename = secure_filename(transaction_photo.filename)
+                transaction_photo.save(os.path.join(app.config['UPLOAD_FOLDER'], transaction_photo_filename))
+                transaction_photo_link = url_for('static', filename=f'uploads/{transaction_photo_filename}', _external=True)
 
-        # Handle payment details
-        transaction_id = request.form['transaction_id']
-        transaction_photo = request.files['transaction_photo']
-        # Upload to OneDrive and get link
-        transaction_photo_link = upload_to_onedrive(transaction_photo)
-        if not transaction_photo_link:
-            # Fallback: save locally and provide local link
-            transaction_photo_filename = secure_filename(transaction_photo.filename)
-            transaction_photo.save(os.path.join(app.config['UPLOAD_FOLDER'], transaction_photo_filename))
-            transaction_photo_link = url_for('static', filename=f'uploads/{transaction_photo_filename}', _external=True)
+            # Create team
+            team = Team(team_name=team_name, leader_id=leader_id, members=json.dumps(members), email=leader_email, contact=leader_phone, transaction_id=transaction_id, transaction_photo=transaction_photo_link)
+            db.session.add(team)
+            db.session.commit()
+            team_id = team.team_id
 
-        # Create team
-        team = Team(team_name=team_name, leader_id=leader_id, members=json.dumps(members), email=leader_email, contact=leader_phone, transaction_id=transaction_id, transaction_photo=transaction_photo_link)
-        db.session.add(team)
-        db.session.commit()
-        team_id = team.team_id
-
-        # Submit abstract
-        if filename.lower().endswith('.pdf'):
-            try:
-                from PyPDF2 import PdfReader
-                reader = PdfReader(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                abstract_text = ''
-                for page in reader.pages:
-                    abstract_text += page.extract_text()
-            except Exception:
-                # Fallback to reading as text if PDF parsing fails
+            # Submit abstract
+            if filename.lower().endswith('.pdf'):
+                try:
+                    from PyPDF2 import PdfReader
+                    reader = PdfReader(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    abstract_text = ''
+                    for page in reader.pages:
+                        abstract_text += page.extract_text()
+                except Exception:
+                    # Fallback to reading as text if PDF parsing fails
+                    with open(os.path.join(app.config['UPLOAD_FOLDER'], filename), 'r', encoding='utf-8', errors='ignore') as f:
+                        abstract_text = f.read()
+            else:
                 with open(os.path.join(app.config['UPLOAD_FOLDER'], filename), 'r', encoding='utf-8', errors='ignore') as f:
                     abstract_text = f.read()
-        else:
-            with open(os.path.join(app.config['UPLOAD_FOLDER'], filename), 'r', encoding='utf-8', errors='ignore') as f:
-                abstract_text = f.read()
-        try:
-            review = ai_review(abstract_text)
-        except Exception:
-            review = {'total_score': 0, 'feedback': 'AI review failed'}
-        submission = Submission(team_id=team_id, abstract_path=filename, ai_score=review['total_score'], feedback=review['feedback'])
-        db.session.add(submission)
-        db.session.commit()
+            try:
+                review = ai_review(abstract_text)
+            except Exception:
+                review = {'total_score': 0, 'feedback': 'AI review failed'}
+            submission = Submission(team_id=team_id, abstract_path=filename, ai_score=review['total_score'], feedback=review['feedback'])
+            db.session.add(submission)
+            db.session.commit()
 
-        # Submit to Google Form
-        import requests
-        GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdBJdjl0uAP9kI3i1zmm2V6osWx7vqGDYCmqVSGHXSJTpnFmw/formResponse"
-        form_data = {
-            "entry.1652384628": team_name,
-            "entry.745041484": leader_name,
-            "entry.991783448": leader_email,
-            "entry.140739757": leader_phone,
-            "entry.73918322": leader_company,
-            "entry.816675560": members[0]['name'] if members else '',
-            "entry.449064233": members[0]['email'] if members else '',
-            "entry.1447071560": members[0]['phone'] if members else '',
-            "entry.1601113014": members[1]['name'] if len(members) > 1 else '',
-            "entry.1347895140": members[1]['email'] if len(members) > 1 else '',
-            "entry.1624551232": members[1]['phone'] if len(members) > 1 else '',
-            "entry.913869574": url_for('static', filename=f'uploads/{filename}', _external=True),
-            "entry.492840252": transaction_photo_link,
-            "entry.1036318918": transaction_id
-        }
-        try:
-            response = requests.post(GOOGLE_FORM_URL, data=form_data)
-            print(f"Google Form submission: {response.status_code}")
-        except Exception:
-            print("Error submitting to Google Form")
+            # Submit to Google Form
+            import requests
+            GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdBJdjl0uAP9kI3i1zmm2V6osWx7vqGDYCmqVSGHXSJTpnFmw/formResponse"
+            form_data = {
+                "entry.1652384628": team_name,
+                "entry.745041484": leader_name,
+                "entry.991783448": leader_email,
+                "entry.140739757": leader_phone,
+                "entry.73918322": leader_company,
+                "entry.816675560": members[0]['name'] if members else '',
+                "entry.449064233": members[0]['email'] if members else '',
+                "entry.1447071560": members[0]['phone'] if members else '',
+                "entry.1601113014": members[1]['name'] if len(members) > 1 else '',
+                "entry.1347895140": members[1]['email'] if len(members) > 1 else '',
+                "entry.1624551232": members[1]['phone'] if len(members) > 1 else '',
+                "entry.913869574": url_for('static', filename=f'uploads/{filename}', _external=True),
+                "entry.492840252": transaction_photo_link,
+                "entry.1036318918": transaction_id
+            }
+            try:
+                response = requests.post(GOOGLE_FORM_URL, data=form_data)
+                print(f"Google Form submission: {response.status_code}")
+            except Exception:
+                print("Error submitting to Google Form")
 
-        # Save to local Excel file (fallback since Google services are blocked)
-        member_details = '; '.join([f"{m['name']} ({m['email']}, {m['phone']}, {m['company']})" for m in members])
-        data = {
-            'Team Name': team_name,
-            'Leader Name': leader_name,
-            'Leader Email': leader_email,
-            'Leader Phone': leader_phone,
-            'Leader Company': leader_company,
-            'Team Size': team_size,
-            'Members': member_details,
-            'Abstract Path': filename,
-            'Transaction ID': transaction_id,
-            'Transaction Photo': transaction_photo_link,
-            'AI Score': review['total_score'],
-            'Feedback': review['feedback'],
-            'Timestamp': datetime.utcnow()
-        }
-        df = pd.DataFrame([data])
-        if os.path.exists('registrations.xlsx'):
-            existing_df = pd.read_excel('registrations.xlsx')
-            df = pd.concat([existing_df, df], ignore_index=True)
-        df.to_excel('registrations.xlsx', index=False)
+            # Save to local Excel file (fallback since Google services are blocked)
+            member_details = '; '.join([f"{m['name']} ({m['email']}, {m['phone']}, {m['company']})" for m in members])
+            data = {
+                'Team Name': team_name,
+                'Leader Name': leader_name,
+                'Leader Email': leader_email,
+                'Leader Phone': leader_phone,
+                'Leader Company': leader_company,
+                'Team Size': team_size,
+                'Members': member_details,
+                'Abstract Path': filename,
+                'Transaction ID': transaction_id,
+                'Transaction Photo': transaction_photo_link,
+                'AI Score': review['total_score'],
+                'Feedback': review['feedback'],
+                'Timestamp': datetime.utcnow()
+            }
+            df = pd.DataFrame([data])
+            if os.path.exists('registrations.xlsx'):
+                existing_df = pd.read_excel('registrations.xlsx')
+                df = pd.concat([existing_df, df], ignore_index=True)
+            df.to_excel('registrations.xlsx', index=False)
 
-        flash('Registration successful! Your abstract has been evaluated. We will get back to you shortly.')
-        return redirect(url_for('registration_success'))
+            flash('Registration successful! Your abstract has been evaluated. We will get back to you shortly.')
+            return redirect(url_for('registration_success'))
+        except Exception as e:
+            # Pass error message to success page to show error
+            return redirect(url_for('registration_success', error=str(e)))
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -317,7 +321,8 @@ def download_registrations():
 
 @app.route('/registration_success')
 def registration_success():
-    return render_template('registration_success.html')
+    error = request.args.get('error')
+    return render_template('registration_success.html', error=error)
 
 @app.route('/results')
 def results():

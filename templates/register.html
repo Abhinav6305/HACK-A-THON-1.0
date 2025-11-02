@@ -5,16 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register - HACK-A-THON 1.0</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/loader.css') }}">
 </head>
 <body>
     <nav>
         <div class="nav-container">
             <div class="logo">
-                <a href="{{ url_for('home') }}">
-                    <img src="{{ url_for('static', filename='logo/ORIGIN LOGO.jpg') }}" alt="Logo">
-                </a>
                 <a href="{{ url_for('static', filename='logo/Untitled design (1).png') }}" target="_blank">
                     <img src="{{ url_for('static', filename='logo/Untitled design (1).png') }}" alt="Logo">
+                </a>
+                <a href="{{ url_for('home') }}">
+                    <img src="{{ url_for('static', filename='logo/ORIGIN LOGO.jpg') }}" alt="Logo">
                 </a>
             </div>
             <ul>
@@ -84,13 +85,24 @@
         </form>
     </section>
 
+    <!-- Loader -->
+    <div id="loader" class="loader">
+        <div class="spinner"></div>
+        <p>Please wait while your abstract is being evaluated and the registration is in process</p>
+    </div>
+
     <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
     <script>
+        window.onload = () => {
+            document.getElementById('loader').classList.remove('show');
+        };
         /* === Multi-step Form Controller === */
         let step = 1; const steps = document.querySelectorAll('.form-step');
         const nextBtn = document.getElementById('nextBtn'); const prevBtn = document.getElementById('prevBtn');
         const form = document.getElementById('registrationForm');
         const teamSizeSelect = document.getElementById('team_size'); const memberFields = document.getElementById('memberFields');
+
+
 
         function genMembers(size){
             memberFields.innerHTML='';
@@ -123,7 +135,8 @@
             prevBtn.style.display=n>1?'block':'none';
             nextBtn.textContent=n===steps.length?'Submit':'Next →';
         }
-        nextBtn.onclick=()=>{
+        nextBtn.onclick=(e)=>{
+            e.preventDefault();
             if(validate(step)){
                 if(step<steps.length){step++;showStep(step);}
                 else registerTeam();
@@ -132,6 +145,7 @@
 
         function registerTeam(){
             if(validate(step)){
+                document.getElementById('loader').classList.add('show');
                 form.submit();
             }
         }
