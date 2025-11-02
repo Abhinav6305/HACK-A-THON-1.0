@@ -228,6 +228,7 @@
                 <div class="team-status">
                     <p><strong>AI Score:</strong> {{ team_data.submission.ai_score if team_data.submission else 'N/A' }}
                     <strong> | Feedback:</strong> {{ team_data.submission.feedback if team_data.submission else 'N/A' }}</p>
+                    <p><strong>Transaction ID:</strong> {{ team_data.team.transaction_id if team_data.team.transaction_id else 'N/A' }}</p>
                 </div>
 
                 <!-- Files Section -->

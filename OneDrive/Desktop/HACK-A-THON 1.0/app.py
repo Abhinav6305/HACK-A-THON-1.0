@@ -21,12 +21,13 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # Add default admin user
 with app.app_context():
     db.create_all()
-    admin = User.query.filter_by(email='abhinavrishisaka@gmail.com').first()
+    # Create admin user if not exists
+    admin = User.query.filter_by(email='admin@example.com').first()
     if not admin:
-        admin = User(name='Admin', email='abhinavrishisaka@gmail.com', role='admin')
-    admin.set_password('admin')
-    db.session.add(admin)
-    db.session.commit()
+        admin = User(name='Admin', email='admin@example.com', role='admin')
+        admin.set_password('admin123')
+        db.session.add(admin)
+        db.session.commit()
 
 @app.route('/')
 def home():
