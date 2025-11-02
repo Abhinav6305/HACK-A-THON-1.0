@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
-from models import db, User, Team, Submission
+from models import db, User, Team, Submission, Evaluation
 from ai_reviewer import ai_review
 from onedrive_services import upload_to_onedrive
 import os
@@ -310,6 +310,20 @@ def download_registrations():
 @app.route('/registration_success')
 def registration_success():
     return render_template('registration_success.html')
+
+@app.route('/results')
+def results():
+    # Calculate leaderboard based on evaluations and AI scores
+    teams = Team.query.filter_by(status='approved').all()
+    leaderboard = []
+    for team in teams:
+        evaluations = Evaluation.query.filter_by(team_id=team.team_id).all()
+        ai_score = Submission.query.filter_by(team_id=team.team_id).first().ai_score or 0
+        avg_judge_score = sum(e.final_score for e in evaluations) / len(evaluations) if evaluations else 0
+        total_score = (ai_score + avg_judge_score) / 2
+        leaderboard.append({'team': team, 'score': total_score})
+    leaderboard.sort(key=lambda x: x['score'], reverse=True)
+    return render_template('results.html', leaderboard=leaderboard)
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
