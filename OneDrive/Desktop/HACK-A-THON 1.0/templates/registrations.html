@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrations - HACK-A-THON 1.0</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <h1>HACK-A-THON 1.0</h1>
+            <ul>
+                <li><a href="{{ url_for('admin_dashboard') }}">Back to Admin Dashboard</a></li>
+                <li><a href="{{ url_for('login') }}">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="registrations">
+        <h2>Registrations Spreadsheet</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Team Name</th>
+                    <th>Leader Name</th>
+                    <th>Leader Email</th>
+                    <th>Leader Phone</th>
+                    <th>Leader Company</th>
+                    <th>Team Size</th>
+                    <th>Members</th>
+                    <th>Abstract Path</th>
+                    <th>AI Score</th>
+                    <th>Feedback</th>
+                    <th>Timestamp</th>
+                    <th>Stage</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for data in data_list %}
+                <tr>
+                    <td>{{ data['Team Name'] }}</td>
+                    <td>{{ data['Leader Name'] }}</td>
+                    <td>{{ data['Leader Email'] }}</td>
+                    <td>{{ data['Leader Phone'] }}</td>
+                    <td>{{ data['Leader Company'] }}</td>
+                    <td>{{ data['Team Size'] }}</td>
+                    <td>{{ data['Members'] }}</td>
+                    <td>{{ data['Abstract Path'] }}</td>
+                    <td>{{ data['AI Score'] }}</td>
+                    <td>{{ data['Feedback'] }}</td>
+                    <td>{{ data['Timestamp'] }}</td>
+                    <td>{{ data['Stage'] }}</td>
+                    <td>{{ data['Status'] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+
+    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+</body>
+</html>
