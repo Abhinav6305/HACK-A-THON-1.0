@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HACK-A-THON 1.0</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <div class="logo">
+                <a href="{{ url_for('static', filename='logo/ORIGIN LOGO.jpg') }}" target="_blank">
+                    <img src="{{ url_for('static', filename='logo/ORIGIN LOGO.jpg') }}" alt="Logo">
+                </a>
+                <a href="{{ url_for('static', filename='logo/Untitled design (1).png') }}" target="_blank">
+                    <img src="{{ url_for('static', filename='logo/Untitled design (1).png') }}" alt="Logo">
+                </a>
+            </div>
+            <ul>
+                <li><a href="#home">Home</a></li>
+                <li><a href="#event-details">Event Details</a></li>
+                <li><a href="{{ url_for('register') }}">Register</a></li>
+                <li><a href="#rules">Rules</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <h2>HACK-A-THON 1.0</h2>
+            <h3>32-Hour International Hybrid Hackathon</h3>
+            <p>ONE TEAM. ONE DREAM. ONE HACK.</p>
+            <div class="tags">
+            </div>
+            <a href="{{ url_for('register') }}" class="btn">Register Now</a>
+        </div>
+    </section>
+
+    <section id="event-details" class="event-details">
+        <div class="container">
+            <div class="icon"></div>
+            <h2>About the Hackathon</h2>
+            <p>HACK-A-THON 1.0 is a 32-hour international-level hybrid hackathon that brings together creative minds from across the globe to innovate, build, and solve real-world problems.</p>
+            <p>Participants can compete on-site or virtually, collaborate with mentors, and showcase solutions that can create an impact.</p>
+            <h3>Dates: December 12 & 13, 2025</h3>
+            <h3>Venue: St. Peter’s Engineering College, Hyderabad – Hybrid Mode (On-site + Virtual)</h3>
+            <h3>Organized By: Department of CSE & IT in association with Origin</h3>
+        </div>
+    </section>
+
+    <section id="prizes" class="prizes">
+        <div class="container">
+            <h2>Rewards & Benefits</h2>
+            <ul>
+                <li>Prize Pool: Up to ₹1,00,000 </li>
+                <li>All Qualified Teams Get Certificates of Participation</li>
+                <li>Industry Mentorship Sessions & Networking Opportunities</li>
+                <li>Exclusive Goodies & Swag for On-site Participants</li>
+            </ul>
+        </div>
+    </section>
+
+    <section id="themes" class="themes">
+        <div class="container">
+            <h2> Themes / Problem Tracks</h2>
+            <ul>
+                <li>Artificial Intelligence</li>
+                <li>Blockchain Innovation</li>
+                <li>Waste Management & Sustainability</li>
+                <li>HealthTech & Well-being</li>
+                <li>AutoTech & Smart Mobility</li>
+                <li>Poverty Reduction & Social Impact</li>
+                <li>Open Innovation (Your Own Idea)</li>
+            </ul>
+        </div>
+    </section>
+
+
+
+    <section id="terms" class="terms">
+        <div class="container">
+            <h2> Terms & Conditions</h2>
+            <p>Registration fees are non-refundable.</p>
+            <p>Teams must adhere to ethical coding and originality guidelines.</p>
+            <p>Any form of plagiarism or misconduct will lead to disqualification.</p>
+            <p>The organizing committee reserves the right to modify event details if necessary.</p>
+        </div>
+    </section>
+
+    <section id="rules" class="rules">
+        <div class="container">
+            <div class="icon"></div>
+            <h2>Registration Process</h2>
+            <h3>Step 1 – Submit Your Abstract</h3>
+            <p>Every team must submit an abstract explaining their idea and proposed solution.</p>
+            <p>Abstract submission fee: ₹100 per team</p>
+            <p>Deadline: November 20, 2025</p>
+            <p>Once the abstract is evaluated, qualified teams will receive an invitation to participate in the main hackathon.</p>
+            <h3>Step 2 – Register for the 32-Hour Main Hackathon</h3>
+            <p>Only shortlisted teams will proceed to this stage.</p>
+            <p>Final registration fee: ₹499 per participant</p>
+            <p>Deadline: December 5, 2025</p>
+            <p>Includes food, refreshments, and event access for on-site participants.</p>
+            <p>Virtual participants will get digital access and mentorship support.</p>
+            <h3>Team Formation</h3>
+            <p>Team Size: Minimum 3, Maximum 5 members</p>
+            <p>School, college, university students are eligible</p>
+            <p>Inter-college and international teams are welcome!</p>
+            <h3>Important Dates</h3>
+            <p>Event	Date</p>
+            <p>Abstract Submission Deadline	Nov 20, 2025</p>
+            <p>Qualified Teams Announcement	Nov 25, 2025</p>
+            <p>Main Hackathon (32 Hours)	Dec 12 – 13, 2025</p>
+        </div>
+    </section>
+
+    <section id="contact" class="contact">
+        <div class="container">
+            <div class="icon">📞</div>
+            <h2>Contact Us</h2>
+            <p><strong>Sunkari Dhivakar Naidu:</strong> 9392563138</p>
+            <p><strong>M. Rakesh:</strong> 7207841233</p>
+            <p><strong>Anand Shivam Burman Roy:</strong> 8328354243</p>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2023 HACK-A-THON 1.0. All rights reserved.</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+</body>
+</html>

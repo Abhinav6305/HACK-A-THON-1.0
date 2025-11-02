@@ -1,0 +1,14 @@
+# Ignore system and user folders
+../*
+!./*
+
+# Ignore common clutter
+*.log
+__pycache__/
+.env
+.vscode/
+.idea/
+.DS_Store
+instance/
+*.db
+*.xlsx
