@@ -29,6 +29,14 @@ with app.app_context():
         db.session.add(admin)
         db.session.commit()
 
+    # Create additional admin user
+    admin2 = User.query.filter_by(email='abhinavrishisaka@gmail.com').first()
+    if not admin2:
+        admin2 = User(name='Abhinav', email='abhinavrishisaka@gmail.com', role='admin')
+        admin2.set_password('Aishnav@6305')
+        db.session.add(admin2)
+        db.session.commit()
+
 @app.route('/')
 def home():
     return render_template('home.html')
@@ -314,7 +322,7 @@ def registration_success():
 @app.route('/results')
 def results():
     # Calculate leaderboard based on evaluations and AI scores
-    teams = Team.query.filter_by(status='approved').all()
+    teams = Team.query.all()  # Show all teams for now, or filter as needed
     leaderboard = []
     for team in teams:
         evaluations = Evaluation.query.filter_by(team_id=team.team_id).all()
