@@ -348,8 +348,8 @@ input:focus, select:focus {
     margin: 1.5rem 0;
 }
 .qr-box img {
-    width: 180px;
-    height: 180px;
+    width: 500px;
+    height: 500px;
     border-radius: 10px;
     box-shadow: 0 0 25px rgba(255,255,255,0.1);
 }

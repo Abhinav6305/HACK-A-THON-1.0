@@ -41,3 +41,4 @@
 - [x] Test database persistence
 - [x] Test error handling and edge cases
 - [x] Verify frontend responsiveness (manual check needed)
+- [x] Fix QR code path in register.html
