@@ -37,9 +37,53 @@ with app.app_context():
         db.session.add(admin2)
         db.session.commit()
 
+def admin_required(f):
+    @functools.wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session or session.get('role') != 'admin':
+            flash('Access denied. Admin login required.')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.route('/')
 def home():
     return render_template('home.html')
+
+@app.route('/admin_dashboard')
+@admin_required
+def admin_dashboard():
+    teams = Team.query.all()
+    teams_data = []
+    for team in teams:
+        leader = User.query.filter_by(user_id=team.leader_id).first()
+        members_list = json.loads(team.members) if team.members else []
+        submission = Submission.query.filter_by(team_id=team.team_id).first()
+        teams_data.append({
+            'team': team,
+            'leader': leader,
+            'members': members_list,
+            'submission': submission
+        })
+    registration_count = len(teams_data)
+    return render_template('admin.html', teams=teams_data, registration_count=registration_count)
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        user = User.query.filter_by(email=email).first()
+        if user and user.check_password(password):
+            session['user_id'] = str(user.user_id)
+            session['role'] = user.role
+            if user.role == 'admin':
+                return redirect(url_for('admin_dashboard'))
+            else:
+                flash('Access denied. Admin login required.')
+                return redirect(url_for('login'))
+        flash('Invalid credentials')
+    return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -195,50 +239,6 @@ def register():
             # Pass error message to success page to show error
             return redirect(url_for('registration_success', error=str(e)))
     return render_template('register.html')
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
-        user = User.query.filter_by(email=email).first()
-        if user and user.check_password(password):
-            session['user_id'] = str(user.user_id)
-            session['role'] = user.role
-            if user.role == 'admin':
-                return redirect(url_for('admin_dashboard'))
-            else:
-                flash('Access denied. Admin login required.')
-                return redirect(url_for('login'))
-        flash('Invalid credentials')
-    return render_template('login.html')
-
-def admin_required(f):
-    @functools.wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session or session.get('role') != 'admin':
-            flash('Access denied. Admin login required.')
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return admin_required
-
-@app.route('/admin_dashboard')
-@admin_required
-def admin_dashboard():
-    teams = Team.query.all()
-    teams_data = []
-    for team in teams:
-        leader = User.query.filter_by(user_id=team.leader_id).first()
-        members_list = json.loads(team.members) if team.members else []
-        submission = Submission.query.filter_by(team_id=team.team_id).first()
-        teams_data.append({
-            'team': team,
-            'leader': leader,
-            'members': members_list,
-            'submission': submission
-        })
-    registration_count = len(teams_data)
-    return render_template('admin.html', teams=teams_data, registration_count=registration_count)
 
 @app.route('/ideathon', methods=['GET', 'POST'])
 def ideathon():
