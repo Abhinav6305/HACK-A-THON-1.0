@@ -188,8 +188,7 @@ def register():
                 df = pd.concat([existing_df, df], ignore_index=True)
             df.to_excel('registrations.xlsx', index=False)
 
-            import time
-            time.sleep(3)  # Simulate processing time to show loader
+            # No sleep needed since loader is handled on frontend
             flash('Registration successful! Your abstract has been evaluated. We will get back to you shortly.')
             return redirect(url_for('registration_success'))
         except Exception as e:
@@ -221,7 +220,7 @@ def admin_required(f):
             flash('Access denied. Admin login required.')
             return redirect(url_for('login'))
         return f(*args, **kwargs)
-    return decorated_function
+    return admin_required
 
 @app.route('/admin_dashboard')
 @admin_required
@@ -266,8 +265,6 @@ def ideathon():
         flash('Idea submitted and evaluated by AI.')
         return redirect(url_for('home'))
     return render_template('ideathon.html')
-
-
 
 @app.route('/update_stage', methods=['POST'])
 @admin_required

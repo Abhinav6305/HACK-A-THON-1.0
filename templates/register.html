@@ -143,11 +143,26 @@
                     step++;showStep(step);
                 }
             } else {
-                document.getElementById('loader').classList.add('show');
                 if(validate(step)){
-                    form.submit();
-                } else {
-                    document.getElementById('loader').classList.remove('show');
+                    document.getElementById('loader').classList.add('show');
+                    // Use AJAX to submit form and redirect to success page
+                    const formData = new FormData(form);
+                    fetch('{{ url_for("register") }}', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            window.location.href = '{{ url_for("registration_success") }}';
+                        } else {
+                            document.getElementById('loader').classList.remove('show');
+                            alert('Registration failed. Please try again.');
+                        }
+                    })
+                    .catch(error => {
+                        document.getElementById('loader').classList.remove('show');
+                        alert('An error occurred. Please try again.');
+                    });
                 }
             }
         };
