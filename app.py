@@ -188,6 +188,8 @@ def register():
                 df = pd.concat([existing_df, df], ignore_index=True)
             df.to_excel('registrations.xlsx', index=False)
 
+            import time
+            time.sleep(3)  # Simulate processing time to show loader
             flash('Registration successful! Your abstract has been evaluated. We will get back to you shortly.')
             return redirect(url_for('registration_success'))
         except Exception as e:
