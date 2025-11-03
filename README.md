@@ -11,16 +11,22 @@ A complete dynamic web interface for the international hackathon event HACK-A-TH
 - **Admin Dashboard**: Manage teams, stages, reviews, export data.
 - **Judge Panel**: Evaluate teams on innovation, feasibility, clarity.
 - **Results & Leaderboard**: Automatically generated from scores.
-- **AI Abstract Reviewer**: Uses OpenAI GPT-4 to score abstracts.
+- **AI Abstract Reviewer**: Uses Ollama with Llama3 for local AI evaluation.
 - **Multi-Stage Event**: Ideathon (20 Nov), Coding Contest (1-2 Dec), Hackathon (5-6 Dec).
 
 ## Setup
 
 1. Clone or download the project.
 2. Install dependencies: `pip install -r requirements.txt`
-3. Set up OpenAI API key: Create a `.env` file with `OPENAI_API_KEY=your_key_here`
+3. Install Ollama: Download from https://ollama.ai/ and run `ollama pull llama3:latest`
 4. Run the app: `python app.py`
 5. Open http://127.0.0.1:5000 in your browser.
+
+## Deployment
+
+- For deployment, ensure Ollama is installed on the server.
+- Use a production WSGI server like Gunicorn: `gunicorn app:app`
+- Set environment variables as needed.
 
 ## Database
 
@@ -31,7 +37,7 @@ Uses SQLite (`database.db`) with tables for users, teams, submissions, judges, e
 - Backend: Flask (Python)
 - Frontend: HTML5, CSS3, JavaScript
 - Database: SQLAlchemy (SQLite)
-- AI: OpenAI API
+- AI: Ollama (Llama3)
 - Styling: Denovate-inspired dark theme with gradients and animations
 
 ## Organization Plan
