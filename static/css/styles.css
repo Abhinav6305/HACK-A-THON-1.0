@@ -220,6 +220,10 @@ footer {
 
 /* === RESPONSIVE === */
 @media (max-width: 768px) {
+    body {
+        padding-top: 180px; /* Increased padding to fully prevent header overlap */
+    }
+
     .nav-container {
         flex-direction: column;
         padding: 1rem;
