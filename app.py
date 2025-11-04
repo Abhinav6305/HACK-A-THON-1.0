@@ -237,7 +237,8 @@ def register():
             return redirect(url_for('registration_success'))
         except Exception as e:
             # Pass error message to success page to show error
-            return redirect(url_for('registration_success', error=str(e)))
+            flash(f'An error occurred: {str(e)}. Please try again.')
+            return redirect(url_for('register'))
     return render_template('register.html')
 
 @app.route('/ideathon', methods=['GET', 'POST'])
