@@ -51,7 +51,6 @@ def home():
     return render_template('home.html')
 
 @app.route('/admin_dashboard')
-@admin_required
 def admin_dashboard():
     teams = Team.query.all()
     teams_data = []
