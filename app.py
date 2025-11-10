@@ -1,162 +1,220 @@
 import os
+import csv
 from datetime import datetime
-from urllib.parse import urlparse
-from flask import Flask, render_template, request, redirect, url_for, abort
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, declarative_base, Mapped, mapped_column, relationship
-from sqlalchemy import Integer, String, DateTime, ForeignKey
+from pathlib import Path
 
-# --- Flask setup ---
-app = Flask(__name__, static_folder="static", template_folder="templates")
-app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev")
-# Render's ephemeral disk: use /tmp for any temp uploads
-app.config["UPLOAD_FOLDER"] = os.getenv("UPLOAD_FOLDER", "/tmp/uploads")
-app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB
+from flask import (
+    Flask, render_template, request, redirect, url_for,
+    send_file, abort, flash
+)
+from werkzeug.utils import secure_filename
 
-os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+from sqlalchemy import (
+    create_engine, Column, Integer, String, DateTime
+)
+from sqlalchemy.orm import sessionmaker, declarative_base, scoped_session
 
-# --- Database setup (Render Postgres) ---
-def _normalize_db_url(raw):
-    # Render may give postgres:// — SQLAlchemy needs postgresql://
-    if raw and raw.startswith("postgres://"):
-        return raw.replace("postgres://", "postgresql://", 1)
-    return raw
+# ----------------------------
+# Flask + Config
+# ----------------------------
+app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret")
 
-DB_URL = _normalize_db_url(os.getenv("DATABASE_URL"))
-if not DB_URL:
-    # allow local dev fallback to sqlite
-    DB_URL = "sqlite:///local.db"
+BASE_DIR = Path(__file__).resolve().parent
+UPLOAD_DIR = BASE_DIR / "static" / "uploads"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-engine = create_engine(DB_URL, pool_pre_ping=True)
-SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+ALLOWED_PDF = {"pdf"}
+ALLOWED_IMG = {"png", "jpg", "jpeg", "webp", "gif"}
+
+# ----------------------------
+# Database (Render Postgres -> local SQLite fallback)
+# ----------------------------
+db_url = os.environ.get("DATABASE_URL")
+if db_url:
+    # Render/Heroku style needs fix: postgres:// -> postgresql+psycopg2://
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+else:
+    db_url = f"sqlite:///{BASE_DIR/'registrations.db'}"
+
+engine = create_engine(db_url, pool_pre_ping=True)
+SessionLocal = scoped_session(sessionmaker(bind=engine))
 Base = declarative_base()
 
-# --- Models ---
+# ----------------------------
+# Models
+# ----------------------------
 class Team(Base):
     __tablename__ = "teams"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    team_name: Mapped[str] = mapped_column(String(120))
-    leader_name: Mapped[str] = mapped_column(String(120))
-    leader_email: Mapped[str] = mapped_column(String(120))
-    leader_phone: Mapped[str] = mapped_column(String(32))
-    leader_company: Mapped[str] = mapped_column(String(160))
-    team_size: Mapped[int] = mapped_column(Integer)
-    abstract_filename: Mapped[str] = mapped_column(String(200), default="")
-    payment_screenshot_url: Mapped[str] = mapped_column(String(500), default="")  # store a link (Drive/OneDrive) or empty
-    transaction_id: Mapped[str] = mapped_column(String(120), default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-    members = relationship("Member", back_populates="team", cascade="all, delete-orphan")
+    id = Column(Integer, primary_key=True)
+    team_name = Column(String(200), nullable=False)
+    leader_name = Column(String(200), nullable=False)
+    leader_email = Column(String(200), nullable=False)
+    leader_phone = Column(String(50), nullable=False)
+    leader_company = Column(String(200), nullable=False)
 
-class Member(Base):
-    __tablename__ = "members"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id"))
-    name: Mapped[str] = mapped_column(String(120))
-    email: Mapped[str] = mapped_column(String(120))
-    phone: Mapped[str] = mapped_column(String(32))
-    company: Mapped[str] = mapped_column(String(160))
-    team = relationship("Team", back_populates="members")
+    team_size = Column(Integer, nullable=False, default=3)
 
-# Create tables automatically on first boot
-with engine.begin() as conn:
-    Base.metadata.create_all(conn)
+    # uploaded file paths relative to /static
+    abstract_path = Column(String(500))         # e.g. uploads/abc.pdf
+    payment_path = Column(String(500))          # e.g. uploads/pay.png
 
-# --- Routes ---
+    transaction_id = Column(String(120))
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+Base.metadata.create_all(engine)
+
+# ----------------------------
+# Helpers
+# ----------------------------
+def _allowed(filename, allowed_set):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in allowed_set
+
+def _save_upload(file_storage, prefix):
+    """
+    Save uploaded file under static/uploads with a safe unique name.
+    Returns relative path like 'uploads/uniquename.ext' (usable with url_for('static', filename=...))
+    """
+    if not file_storage:
+        return None
+    filename = secure_filename(file_storage.filename or "")
+    if not filename:
+        return None
+    ext = filename.rsplit(".", 1)[-1].lower()
+    unique = f"{prefix}_{int(datetime.utcnow().timestamp())}.{ext}"
+    out_path = UPLOAD_DIR / unique
+    file_storage.save(out_path)
+    return f"uploads/{unique}"
+
+# ----------------------------
+# Routes
+# ----------------------------
+
 @app.route("/")
 def home():
-    return render_template("home.html")  # your existing home
+    # Your existing home.html
+    return render_template("home.html")
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "GET":
-        return render_template("register.html")  # your existing template
-    # POST
+        return render_template("register.html")
+
+    # --- POST: create a team record
     form = request.form
-    size = int(form.get("team_size", "3") or 3)
+    files = request.files
 
-    # optional file save (abstract PDF) → place on ephemeral /tmp so request doesn't crash
-    abstract_file = request.files.get("abstract")
-    abstract_path = ""
-    if abstract_file and abstract_file.filename:
-        abstract_path = os.path.join(app.config["UPLOAD_FOLDER"], f"{datetime.utcnow().timestamp()}_{abstract_file.filename}")
-        abstract_file.save(abstract_path)
+    # Required leader fields (align these names with your form inputs)
+    team_name = form.get("team_name", "").strip()
+    leader_name = form.get("leader_name", "").strip()
+    leader_email = form.get("leader_email", "").strip()
+    leader_phone = form.get("leader_phone", "").strip()
+    leader_company = form.get("leader_company", "").strip()
+    team_size = int(form.get("team_size", "3") or 3)
 
-    # if you're using a cloud link for screenshot, capture it as text
-    payment_url = form.get("transaction_photo_url", "").strip()  # <input name="transaction_photo_url"> on your form
+    # Validate minimal fields
+    if not all([team_name, leader_name, leader_email, leader_phone, leader_company]):
+        flash("Please fill all required fields.", "error")
+        return redirect(url_for("register"))
 
-    team = Team(
-        team_name=form.get("team_name","").strip(),
-        leader_name=form.get("leader_name","").strip(),
-        leader_email=form.get("leader_email","").strip(),
-        leader_phone=form.get("leader_phone","").strip(),
-        leader_company=form.get("leader_company","").strip(),
-        team_size=size,
-        abstract_filename=os.path.basename(abstract_path) if abstract_path else "",
-        transaction_id=form.get("transaction_id","").strip(),
-        payment_screenshot_url=payment_url
-    )
-    # members
-    for i in range(1, size):  # members apart from lead
-        team.members.append(Member(
-            name=form.get(f"member_{i}_name","").strip(),
-            email=form.get(f"member_{i}_email","").strip(),
-            phone=form.get(f"member_{i}_phone","").strip(),
-            company=form.get(f"member_{i}_company","").strip(),
-        ))
+    # Files
+    abstract_file = files.get("abstract")
+    pay_file = files.get("transaction_photo")
+    transaction_id = form.get("transaction_id", "").strip()
 
+    # Validate file types
+    abstract_path = None
+    if abstract_file and _allowed(abstract_file.filename, ALLOWED_PDF):
+        abstract_path = _save_upload(abstract_file, prefix="abstract")
+    elif abstract_file:
+        flash("Abstract must be a .pdf file", "error")
+        return redirect(url_for("register"))
+
+    payment_path = None
+    if pay_file and _allowed(pay_file.filename, ALLOWED_IMG):
+        payment_path = _save_upload(pay_file, prefix="payment")
+    elif pay_file:
+        flash("Payment screenshot must be an image", "error")
+        return redirect(url_for("register"))
+
+    # Persist
     db = SessionLocal()
     try:
+        team = Team(
+            team_name=team_name,
+            leader_name=leader_name,
+            leader_email=leader_email,
+            leader_phone=leader_phone,
+            leader_company=leader_company,
+            team_size=team_size,
+            abstract_path=abstract_path,
+            payment_path=payment_path,
+            transaction_id=transaction_id
+        )
         db.add(team)
         db.commit()
+        flash("Registration successful!", "success")
+        return redirect(url_for("registration_success"))
     except Exception as e:
         db.rollback()
-        # log the error to stdout so Render logs show it
-        print("REGISTER ERROR:", e, flush=True)
-        abort(500)
+        app.logger.exception("Registration error")
+        flash("Something went wrong while saving. Please try again.", "error")
+        return redirect(url_for("register"))
     finally:
         db.close()
-
-    return redirect(url_for("registration_success"))
 
 @app.route("/registration_success")
 def registration_success():
     return render_template("registration_success.html")
 
-# exact path requested by you
 @app.route("/admin_dashboard")
 def admin_dashboard():
     db = SessionLocal()
     try:
         teams = db.query(Team).order_by(Team.created_at.desc()).all()
-        # Shape data for your template
-        data = []
-        for t in teams:
-            data.append({
-                "team": t,
-                "leader": {
-                    "name": t.leader_name,
-                    "email": t.leader_email,
-                    "phone": t.leader_phone,
-                    "company": t.leader_company,
-                },
-                "members": [{"name": m.name, "email": m.email, "phone": m.phone, "company": m.company} for m in t.members],
-            })
+        total = db.query(Team).count()
+        return render_template("admin_dashboard.html", teams=teams, total=total)
     finally:
         db.close()
-    return render_template("admin_dashboard.html", teams=data, registration_count=len(data))
 
-# health check (useful on Render)
-@app.route("/healthz")
-def healthz():
+@app.route("/download_csv")
+def download_csv():
+    """Download all registrations as CSV."""
+    db = SessionLocal()
     try:
-        with engine.connect() as conn:
-            conn.execute(text("select 1"))
-        return "ok", 200
-    except Exception as e:
-        print("HEALTH ERROR:", e, flush=True)
-        return "db error", 500
+        teams = db.query(Team).order_by(Team.created_at.desc()).all()
+    finally:
+        db.close()
 
+    tmp = BASE_DIR / "registrations_export.csv"
+    with open(tmp, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow([
+            "Team Name", "Leader Name", "Leader Email", "Leader Phone",
+            "College/Company", "Team Size", "Transaction ID",
+            "Abstract URL", "Payment Screenshot URL", "Registered At (UTC)"
+        ])
+        for t in teams:
+            abstract_url = url_for("static", filename=t.abstract_path, _external=True) if t.abstract_path else ""
+            payment_url = url_for("static", filename=t.payment_path, _external=True) if t.payment_path else ""
+            w.writerow([
+                t.team_name, t.leader_name, t.leader_email, t.leader_phone,
+                t.leader_company, t.team_size, t.transaction_id,
+                abstract_url, payment_url, t.created_at.isoformat()
+            ])
+
+    return send_file(tmp, as_attachment=True, download_name="registrations.csv")
+
+@app.route("/refresh")
+def refresh():
+    # Just reload admin dashboard
+    return redirect(url_for("admin_dashboard"))
+
+# ----------------------------
+# Render needs this
+# ----------------------------
 if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)

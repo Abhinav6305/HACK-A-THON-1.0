@@ -1,71 +1,382 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - HACK-A-THON 1.0</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard - HACK-A-THON 1.0</title>
+
+  <!-- same CSS you pasted earlier; unchanged except the count/table now comes from Jinja -->
+  <style>
+    /* HACK-A-THON 1.0 — Black & White Premium Minimal Theme for Admin Dashboard */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #000;
+    color: #fff;
+    line-height: 1.6;
+    overflow-x: hidden;
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* === NAVBAR === */
+nav {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.nav-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.nav-container .logo {
+    display: flex;
+    gap: 10px;
+}
+
+.nav-container .logo img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: none;
+    outline: none;
+}
+
+img:focus {
+    outline: none;
+}
+
+.nav-container ul {
+    display: flex;
+    list-style: none;
+    gap: 2rem;
+}
+
+.nav-container ul li a {
+    color: #fff;
+    text-decoration: none;
+    font-weight: 500;
+    position: relative;
+    transition: color 0.3s ease;
+}
+
+.nav-container ul li a::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -5px;
+    width: 0%;
+    height: 2px;
+    background: #fff;
+    transition: width 0.3s ease;
+}
+
+.nav-container ul li a:hover::after {
+    width: 100%;
+}
+
+/* === DASHBOARD SECTION === */
+.dashboard {
+    padding: 7rem 2rem 5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    background: linear-gradient(145deg, #000 0%, #0a0a0a 100%);
+    min-height: 100vh;
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard::before, .dashboard::after {
+    content: '';
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(255,255,255,0.07) 0%, transparent 70%);
+    border-radius: 50%;
+    filter: blur(90px);
+    animation: drift 8s infinite ease-in-out alternate;
+    z-index: -1;
+}
+
+.dashboard::before {
+    top: 10%;
+    left: -10%;
+}
+
+.dashboard::after {
+    bottom: 10%;
+    right: -10%;
+}
+
+@keyframes drift {
+    0% { transform: translate(0,0) scale(1); opacity: 0.4; }
+    50% { transform: translate(40px, -40px) scale(1.2); opacity: 0.6; }
+    100% { transform: translate(0,0) scale(1); opacity: 0.4; }
+}
+
+.dashboard h2 {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    text-shadow: 0 0 15px rgba(255,255,255,0.2);
+    animation: fadeInUp 1s ease-out;
+}
+
+.stats-card {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    width: 80%;
+    max-width: 900px;
+    text-align: center;
+    transition: all 0.3s ease;
+    animation: fadeInUp 1s ease-out 0.5s both;
+}
+
+.stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0 40px rgba(255,255,255,0.05);
+}
+
+.stats-card h3 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.stats-card p {
+    font-size: 1.2rem;
+    opacity: 0.8;
+}
+
+.table-container {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 15px;
+    padding: 2rem;
+    width: 80%;
+    max-width: 900px;
+    overflow-x: auto;
+    transition: all 0.3s ease;
+    animation: fadeInUp 1s ease-out 1s both;
+}
+
+.table-container:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0 40px rgba(255,255,255,0.05);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    color: #fff;
+}
+
+th, td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+th {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+tr:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+a {
+    color: #fff;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+a:hover {
+    color: rgba(255,255,255,0.7);
+}
+
+.btn {
+    display: inline-block;
+    background: #fff;
+    color: #000;
+    padding: 1rem 2.5rem;
+    border-radius: 50px;
+    margin: 1rem 0.5rem;
+    text-decoration: none;
+    font-weight: 600;
+    border: 2px solid #fff;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    background: transparent;
+    color: #fff;
+    box-shadow: 0 0 20px rgba(255,255,255,0.5);
+}
+
+.button-group {
+    margin-top: 2rem;
+}
+
+/* === ANIMATIONS === */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+    body {
+        padding-top: 180px;
+    }
+
+    .nav-container {
+        flex-direction: column;
+        padding: 1rem;
+    }
+
+    .nav-container .logo {
+        margin-bottom: 1rem;
+    }
+
+    .nav-container ul {
+        flex-direction: column;
+        background: rgba(0, 0, 0, 0.95);
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        display: none;
+    }
+
+    .nav-container ul.show {
+        display: flex;
+    }
+
+    .dashboard {
+        padding: 5rem 1rem 3rem;
+    }
+
+    .dashboard h2 {
+        font-size: 2rem;
+    }
+
+    .stats-card, .table-container {
+        width: 95%;
+        padding: 1.5rem;
+    }
+
+    table {
+        font-size: 0.9rem;
+    }
+
+    th, td {
+        padding: 0.5rem;
+    }
+
+    .btn {
+        padding: 0.8rem 2rem;
+        margin: 0.5rem;
+    }
+}
+  </style>
 </head>
 <body>
-    <nav>
-        <div class="nav-container">
-            <h1>HACK-A-THON 1.0 Admin</h1>
-            <ul>
-                <li><a href="{{ url_for('home') }}">Home</a></li>
-            </ul>
-        </div>
-    </nav>
+  <nav>
+    <div class="nav-container">
+      <div class="logo">
+        <a href="{{ url_for('static', filename='logo/Untitled design (1).png') }}" target="_blank">
+          <img src="{{ url_for('static', filename='logo/Untitled design (1).png') }}" alt="Logo">
+        </a>
+        <a href="{{ url_for('static', filename='logo/ORIGIN LOGO.jpg') }}" target="_blank">
+          <img src="{{ url_for('static', filename='logo/ORIGIN LOGO.jpg') }}" alt="Logo">
+        </a>
+      </div>
+      <ul>
+        <li><a href="{{ url_for('home') }}">Home</a></li>
+        <li><a href="#event-details">Event Details</a></li>
+        <li><a href="{{ url_for('register') }}">Register</a></li>
+        <li><a href="#rules">Rules</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </div>
+  </nav>
 
-    <section class="admin-dashboard">
-        <h2>Admin Dashboard</h2>
-        <div class="stats">
-            <div class="stat-card">
-                <h3>Total Registrations</h3>
-                <p>{{ registration_count }}</p>
-            </div>
-        </div>
+  <section class="dashboard">
+    <h2>HACK-A-THON 1.0 Admin</h2>
 
-        <div class="registrations-list">
-            <h3>All Registrations</h3>
-            {% for item in teams %}
-            <div class="registration-card">
-                <h4>{{ item.team.team_name }}</h4>
-                <div class="leader-info">
-                    <h5>Team Leader</h5>
-                    <p><strong>Name:</strong> {{ item.leader.name }}</p>
-                    <p><strong>Email:</strong> {{ item.leader.email }}</p>
-                    <p><strong>Phone:</strong> {{ item.leader.phone }}</p>
-                    <p><strong>College:</strong> {{ item.leader.company }}</p>
-                </div>
-                <div class="team-info">
-                    <p><strong>Team Size:</strong> {{ item.team.team_size }}</p>
-                    <p><strong>Transaction ID:</strong> {{ item.team.transaction_id }}</p>
-                    {% if item.team.abstract_filename %}
-                    <p><strong>Abstract:</strong> {{ item.team.abstract_filename }}</p>
-                    {% endif %}
-                    {% if item.team.payment_screenshot_url %}
-                    <p><strong>Payment Screenshot:</strong> <a href="{{ item.team.payment_screenshot_url }}" target="_blank">View</a></p>
-                    {% endif %}
-                    <p><strong>Registered:</strong> {{ item.team.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
-                </div>
-                {% if item.members %}
-                <div class="members-info">
-                    <h5>Team Members</h5>
-                    {% for member in item.members %}
-                    <div class="member">
-                        <p><strong>Name:</strong> {{ member.name }}</p>
-                        <p><strong>Email:</strong> {{ member.email }}</p>
-                        <p><strong>Phone:</strong> {{ member.phone }}</p>
-                        <p><strong>College:</strong> {{ member.company }}</p>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-            </div>
-            {% endfor %}
-        </div>
-    </section>
+    <div class="stats-card">
+      <h3>Total Registrations</h3>
+      <p>{{ total }} Teams</p>
+    </div>
 
-    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Team Name</th>
+            <th>Leader Name</th>
+            <th>Leader Email</th>
+            <th>Team Size</th>
+            <th>Abstract File</th>
+            <th>Payment Screenshot</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for t in teams %}
+          <tr>
+            <td>{{ t.team_name }}</td>
+            <td>{{ t.leader_name }}</td>
+            <td>{{ t.leader_email }}</td>
+            <td>{{ t.team_size }}</td>
+            <td>
+              {% if t.abstract_path %}
+                <a href="{{ url_for('static', filename=t.abstract_path) }}" download>Download</a>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>
+              {% if t.payment_path %}
+                <a href="{{ url_for('static', filename=t.payment_path) }}" target="_blank">View</a>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" style="opacity:.7">No registrations yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="button-group">
+      <a href="{{ url_for('download_csv') }}" class="btn">Download All Registrations (CSV)</a>
+      <a href="{{ url_for('refresh') }}" class="btn">Refresh Data</a>
+    </div>
+  </section>
 </body>
 </html>
