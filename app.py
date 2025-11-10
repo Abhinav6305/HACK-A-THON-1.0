@@ -97,7 +97,7 @@ def register():
         payment_screenshot_url=payment_url
     )
     # members
-    for i in range(1, size):  # members apart from leader
+    for i in range(1, size):  # members apart from lead
         team.members.append(Member(
             name=form.get(f"member_{i}_name","").strip(),
             email=form.get(f"member_{i}_email","").strip(),
@@ -158,4 +158,5 @@ def healthz():
         return "db error", 500
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
