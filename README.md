@@ -1,62 +1,64 @@
 # HACK-A-THON 1.0 Interface
 
-A complete dynamic web interface for the international hackathon event HACK-A-THON 1.0, modeled after Denovate.org's style and functionality.
+A complete dynamic web interface for the HACK-A-THON 1.0 international hackathon event, modeled after Denovate.org's style and functionality.
 
 ## Features
 
 - **Landing Page**: Event introduction, stages, schedule, prizes, registration button.
-- **Registration**: Team registration with abstract upload and AI evaluation.
-- **Login**: For participants, admins, and judges.
-- **Participant Dashboard**: Progress tracking across 3 stages, submissions, results.
-- **Admin Dashboard**: Manage teams, stages, reviews, export data.
-- **Judge Panel**: Evaluate teams on innovation, feasibility, clarity.
-- **Results & Leaderboard**: Automatically generated from scores.
-- **AI Abstract Reviewer**: Uses Ollama with Llama3 for local AI evaluation.
-- **Multi-Stage Event**: Ideathon (20 Nov), Coding Contest (1-2 Dec), Hackathon (5-6 Dec).
+- **Registration**: Team registration with abstract upload, AI evaluation.
+- **Admin Dashboard**: Manage teams, view registrations, export data.
+- **AI Abstract Reviewer**: Uses OpenAI GPT-4 to score abstracts on Innovation, Relevance, Feasibility, Clarity.
+- **Database**: SQLite for local development, PostgreSQL for production.
+- **Modern UI**: Denovate-style design with gradients, animations, neon-tech theme.
 
 ## Setup
 
-1. Clone or download the project.
+1. Clone the repository.
 2. Install dependencies: `pip install -r requirements.txt`
-3. Install Ollama: Download from https://ollama.ai/ and run `ollama pull llama3:latest`
+3. Set environment variables:
+   - `OPENAI_API_KEY`: Your OpenAI API key for AI evaluation.
+   - `DATABASE_URL`: PostgreSQL URL for production (optional, defaults to SQLite).
+   - `SECRET_KEY`: Flask secret key.
+   - `ADMIN_PASSWORD`: Password for admin access.
 4. Run the app: `python app.py`
-5. Open http://127.0.0.1:5000 in your browser.
+5. Access at `http://127.0.0.1:5000/`
 
-## Deployment
+## Project Structure
 
-- For deployment, ensure Ollama is installed on the server.
-- Use a production WSGI server like Gunicorn: `gunicorn app:app`
-- Set environment variables as needed.
+```
+hackathon_interface/
+├── static/
+│   ├── css/styles.css
+│   ├── js/scripts.js
+│   └── uploads/
+├── templates/
+│   ├── home.html
+│   ├── register.html
+│   ├── admin.html
+│   └── results.html
+├── app.py
+├── models.py
+├── ai_reviewer.py
+├── requirements.txt
+├── README.md
+└── database.db (created automatically)
+```
 
-## Database
+## Routes
 
-Uses SQLite (`database.db`) with tables for users, teams, submissions, judges, evaluations, problem_statements.
+- `/`: Home page
+- `/register`: Team registration
+- `/admin`: Admin dashboard
+- `/results`: Leaderboard
 
 ## Technologies
 
-- Backend: Flask (Python)
-- Frontend: HTML5, CSS3, JavaScript
-- Database: SQLAlchemy (SQLite)
-- AI: Ollama (Llama3)
-- Styling: Denovate-inspired dark theme with gradients and animations
+- **Backend**: Flask (Python)
+- **Database**: SQLAlchemy (SQLite/PostgreSQL)
+- **AI**: OpenAI GPT-4 API
+- **Frontend**: HTML5, CSS3, JavaScript
+- **Styling**: Custom CSS with animations
 
-## Organization Plan
+## Deployment
 
-- **Budget**: ~14 lakhs
-- **Stages**:
-  - Stage 1: Virtual Ideathon (20 Nov 2025) - PPT upload, AI evaluation
-  - Stage 2: Virtual Coding Contest (1-2 Dec 2025) - Link to external platform
-  - Stage 3: Offline Hackathon (5-6 Dec 2025) - Judging and final results
-- **Sponsorship**: Seek sponsors for prizes, logistics, promotion.
-- **Logistics**: Online platforms for virtual stages, venue for offline.
-- **Promotion**: Social media, university networks, international outreach.
-- **Extras**: Email/WhatsApp notifications, certificate generation, data export.
-
-## Testing
-
-- Registration: Submit form, check database entry and AI score.
-- Login: Authenticate and redirect to appropriate dashboard.
-- Stages: Upload PPT for Ideathon, access coding contest link.
-- Admin: Approve teams, update stages.
-- Judge: Evaluate teams.
-- Results: View leaderboard with combined scores.
+Deploy to Heroku, Render, or similar platform. Set environment variables in the platform's settings.
