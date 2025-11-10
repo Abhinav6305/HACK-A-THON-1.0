@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - HACK-A-THON 1.0</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <h1>HACK-A-THON 1.0 Admin</h1>
+            <ul>
+                <li><a href="{{ url_for('home') }}">Home</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="admin-dashboard">
+        <h2>Admin Dashboard</h2>
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Total Registrations</h3>
+                <p>{{ registration_count }}</p>
+            </div>
+        </div>
+
+        <div class="registrations-list">
+            <h3>All Registrations</h3>
+            {% for item in teams %}
+            <div class="registration-card">
+                <h4>{{ item.team.team_name }}</h4>
+                <div class="leader-info">
+                    <h5>Team Leader</h5>
+                    <p><strong>Name:</strong> {{ item.leader.name }}</p>
+                    <p><strong>Email:</strong> {{ item.leader.email }}</p>
+                    <p><strong>Phone:</strong> {{ item.leader.phone }}</p>
+                    <p><strong>College:</strong> {{ item.leader.company }}</p>
+                </div>
+                <div class="team-info">
+                    <p><strong>Team Size:</strong> {{ item.team.team_size }}</p>
+                    <p><strong>Transaction ID:</strong> {{ item.team.transaction_id }}</p>
+                    {% if item.team.abstract_filename %}
+                    <p><strong>Abstract:</strong> {{ item.team.abstract_filename }}</p>
+                    {% endif %}
+                    {% if item.team.payment_screenshot_url %}
+                    <p><strong>Payment Screenshot:</strong> <a href="{{ item.team.payment_screenshot_url }}" target="_blank">View</a></p>
+                    {% endif %}
+                    <p><strong>Registered:</strong> {{ item.team.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                </div>
+                {% if item.members %}
+                <div class="members-info">
+                    <h5>Team Members</h5>
+                    {% for member in item.members %}
+                    <div class="member">
+                        <p><strong>Name:</strong> {{ member.name }}</p>
+                        <p><strong>Email:</strong> {{ member.email }}</p>
+                        <p><strong>Phone:</strong> {{ member.phone }}</p>
+                        <p><strong>College:</strong> {{ member.company }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+</body>
+</html>
