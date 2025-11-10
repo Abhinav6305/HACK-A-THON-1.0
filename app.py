@@ -40,21 +40,22 @@ with app.app_context():
 def home():
     return render_template("home.html")
 
-@app.route("/register", methods=["POST"])
+@app.route("/register", methods=["GET", "POST"])
 def register():
-    data = Registration(
-        team_name=request.form.get("team_name"),
-        leader_name=request.form.get("leader_name"),
-        leader_email=request.form.get("leader_email"),
-        leader_phone=request.form.get("leader_phone"),
-        college=request.form.get("leader_company"),
-        team_size=request.form.get("team_size"),
-        transaction_id=request.form.get("transaction_id")
-    )
-    db.session.add(data)
-    db.session.commit()
-    return redirect(url_for("home"))
-
+    if request.method == "POST":
+        data = Registration(
+            team_name=request.form.get("team_name"),
+            leader_name=request.form.get("leader_name"),
+            leader_email=request.form.get("leader_email"),
+            leader_phone=request.form.get("leader_phone"),
+            college=request.form.get("leader_company"),
+            team_size=request.form.get("team_size"),
+            transaction_id=request.form.get("transaction_id")
+        )
+        db.session.add(data)
+        db.session.commit()
+        return redirect(url_for("home"))
+    return render_template("register.html")
 
 # Admin Dashboard
 @app.route("/admin")
