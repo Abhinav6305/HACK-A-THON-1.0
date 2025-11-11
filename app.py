@@ -5,7 +5,7 @@ from pathlib import Path
 
 from flask import (
     Flask, render_template, request, redirect, url_for,
-    send_file, abort, flash
+    send_file, abort, flash, RequestEntityTooLarge
 )
 from werkzeug.utils import secure_filename
 
@@ -13,6 +13,18 @@ from sqlalchemy import (
     create_engine, Column, Integer, String, DateTime
 )
 from sqlalchemy.orm import sessionmaker, declarative_base, scoped_session
+
+# Cloudinary for file persistence
+import cloudinary
+import cloudinary.uploader
+from cloudinary.utils import cloudinary_url
+
+# Configure Cloudinary (set these in Render env vars)
+cloudinary.config(
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET")
+)
 
 # ----------------------------
 # Flask + Config
@@ -26,6 +38,9 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_PDF = {"pdf"}
 ALLOWED_IMG = {"png", "jpg", "jpeg", "webp", "gif"}
+
+# File size limit: 10MB
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024
 
 # ----------------------------
 # Database (Render Postgres -> local SQLite fallback)
@@ -57,9 +72,9 @@ class Team(Base):
 
     team_size = Column(Integer, nullable=False, default=3)
 
-    # uploaded file paths relative to /static
-    abstract_path = Column(String(500))         # e.g. uploads/abc.pdf
-    payment_path = Column(String(500))          # e.g. uploads/pay.png
+    # uploaded file URLs from Cloudinary
+    abstract_url = Column(String(500))
+    payment_url = Column(String(500))
 
     transaction_id = Column(String(120))
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -74,27 +89,39 @@ def _allowed(filename, allowed_set):
 
 def _save_upload(file_storage, prefix):
     """
-    Save uploaded file under static/uploads with a safe unique name.
-    Returns relative path like 'uploads/uniquename.ext' (usable with url_for('static', filename=...))
+    Save uploaded file to Cloudinary for persistence.
+    Returns public URL from Cloudinary.
     """
     if not file_storage:
         return None
     filename = secure_filename(file_storage.filename or "")
     if not filename:
         return None
-    ext = filename.rsplit(".", 1)[-1].lower()
-    unique = f"{prefix}_{int(datetime.utcnow().timestamp())}.{ext}"
-    out_path = UPLOAD_DIR / unique
-    file_storage.save(out_path)
-    return f"uploads/{unique}"
+
+    try:
+        # Upload to Cloudinary
+        result = cloudinary.uploader.upload(
+            file_storage,
+            public_id=f"{prefix}_{int(datetime.utcnow().timestamp())}",
+            resource_type="auto"
+        )
+        return result['secure_url']
+    except Exception as e:
+        app.logger.exception("Cloudinary upload failed")
+        return None
+
+# ----------------------------
+# Error Handlers
+# ----------------------------
+@app.errorhandler(RequestEntityTooLarge)
+def handle_file_too_large(e):
+    return "File too large. Maximum 10 MB allowed.", 413
 
 # ----------------------------
 # Routes
 # ----------------------------
-
 @app.route("/")
 def home():
-    # Your existing home.html
     return render_template("home.html")
 
 @app.route("/register", methods=["GET", "POST"])
@@ -106,7 +133,7 @@ def register():
     form = request.form
     files = request.files
 
-    # Required leader fields (align these names with your form inputs)
+    # Required leader fields
     team_name = form.get("team_name", "").strip()
     leader_name = form.get("leader_name", "").strip()
     leader_email = form.get("leader_email", "").strip()
@@ -124,22 +151,22 @@ def register():
     pay_file = files.get("transaction_photo")
     transaction_id = form.get("transaction_id", "").strip()
 
-    # Validate file types
-    abstract_path = None
+    # Validate file types and upload to Cloudinary
+    abstract_url = None
     if abstract_file and _allowed(abstract_file.filename, ALLOWED_PDF):
-        abstract_path = _save_upload(abstract_file, prefix="abstract")
+        abstract_url = _save_upload(abstract_file, prefix="abstract")
     elif abstract_file:
         flash("Abstract must be a .pdf file", "error")
         return redirect(url_for("register"))
 
-    payment_path = None
+    payment_url = None
     if pay_file and _allowed(pay_file.filename, ALLOWED_IMG):
-        payment_path = _save_upload(pay_file, prefix="payment")
+        payment_url = _save_upload(pay_file, prefix="payment")
     elif pay_file:
         flash("Payment screenshot must be an image", "error")
         return redirect(url_for("register"))
 
-    # Persist
+    # Persist to DB
     db = SessionLocal()
     try:
         team = Team(
@@ -149,8 +176,8 @@ def register():
             leader_phone=leader_phone,
             leader_company=leader_company,
             team_size=team_size,
-            abstract_path=abstract_path,
-            payment_path=payment_path,
+            abstract_url=abstract_url,
+            payment_url=payment_url,
             transaction_id=transaction_id
         )
         db.add(team)
@@ -197,19 +224,16 @@ def download_csv():
             "Abstract URL", "Payment Screenshot URL", "Registered At (UTC)"
         ])
         for t in teams:
-            abstract_url = url_for("static", filename=t.abstract_path, _external=True) if t.abstract_path else ""
-            payment_url = url_for("static", filename=t.payment_path, _external=True) if t.payment_path else ""
             w.writerow([
                 t.team_name, t.leader_name, t.leader_email, t.leader_phone,
                 t.leader_company, t.team_size, t.transaction_id,
-                abstract_url, payment_url, t.created_at.isoformat()
+                t.abstract_url or "", t.payment_url or "", t.created_at.isoformat()
             ])
 
     return send_file(tmp, as_attachment=True, download_name="registrations.csv")
 
 @app.route("/refresh")
 def refresh():
-    # Just reload admin dashboard
     return redirect(url_for("admin_dashboard"))
 
 # ----------------------------
