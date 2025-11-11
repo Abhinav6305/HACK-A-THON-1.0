@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Results - HACK-A-THON 1.0</title>
+    <title>Results & Leaderboard - HACK-A-THON 1.0</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
@@ -12,19 +12,32 @@
             <h1>HACK-A-THON 1.0</h1>
             <ul>
                 <li><a href="{{ url_for('home') }}">Home</a></li>
-                <li><a href="#">Logout</a></li>
+                <li><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
             </ul>
         </div>
     </nav>
 
     <section class="results">
-        <h2>Leaderboard</h2>
+        <h2>Results & Leaderboard</h2>
         <div class="leaderboard">
-            {% for reg in registrations %}
-            <div class="entry">
-                <p>{{ reg.team_name }} - Score: 0</p>
-            </div>
-            {% endfor %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Team Name</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in leaderboard %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ item.team.team_name }}</td>
+                        <td>{{ "%.2f"|format(item.score) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </section>
 

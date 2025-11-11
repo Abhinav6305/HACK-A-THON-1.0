@@ -1,4 +1,12 @@
-/* HACK-A-THON 1.0 — Black & White Premium Minimal Theme */
+/* Denovate-style CSS for HACK-A-THON 1.0 */
+
+:root {
+    --primary: #00C2FF;
+    --secondary: #FF004D;
+    --dark: #0a0a0a;
+    --light: #f5f5f5;
+    --gradient: linear-gradient(135deg, var(--primary), var(--secondary));
+}
 
 * {
     margin: 0;
@@ -7,541 +15,212 @@
 }
 
 body {
-    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #000;
-    color: #fff;
+    font-family: 'Arial', sans-serif;
+    background: var(--dark);
+    color: var(--light);
     line-height: 1.6;
-    overflow-x: hidden;
-    transition: background 0.3s ease, color 0.3s ease;
 }
 
-/* === NAVBAR === */
 nav {
+    background: rgba(0, 0, 0, 0.8);
+    padding: 1rem 0;
     position: fixed;
-    top: 0;
     width: 100%;
-    background: rgba(0, 0, 0, 0.9);
-    backdrop-filter: blur(10px);
-    z-index: 1000;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    z-index: 100;
 }
 
 .nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
+    padding: 0 2rem;
 }
 
-.nav-container .logo {
-    display: flex;
-    gap: 10px;
-}
-
-.nav-container .logo img {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    border: none;
-    outline: none;
-}
-
-img:focus {
-    outline: none;
+.nav-container h1 {
+    color: var(--primary);
 }
 
 .nav-container ul {
-    display: flex;
     list-style: none;
-    gap: 2rem;
+    display: flex;
+}
+
+.nav-container ul li {
+    margin-left: 2rem;
 }
 
 .nav-container ul li a {
-    color: #fff;
+    color: var(--light);
     text-decoration: none;
-    font-weight: 500;
-    position: relative;
-    transition: color 0.3s ease;
+    transition: color 0.3s;
 }
 
-.nav-container ul li a::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    bottom: -5px;
-    width: 0%;
-    height: 2px;
-    background: #fff;
-    transition: width 0.3s ease;
+.nav-container ul li a:hover {
+    color: var(--primary);
 }
 
-.nav-container ul li a:hover::after {
-    width: 100%;
-}
-
-/* === HERO === */
 .hero {
     height: 100vh;
+    background: var(--gradient);
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    background: linear-gradient(145deg, #000 0%, #111 100%);
-    position: relative;
-    overflow: hidden;
-}
-
-.hero::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at center, rgba(255,255,255,0.05), transparent 70%);
-}
-
-.hero-content {
-    z-index: 2;
-    animation: fadeInUp 1s ease-out;
+    padding: 0 2rem;
 }
 
 .hero-content h2 {
-    font-size: 4rem;
-    font-weight: 800;
-    letter-spacing: 2px;
-    text-shadow: 0 0 20px rgba(255,255,255,0.2);
-}
-
-.hero-content h3 {
-    font-size: 1.8rem;
-    margin-top: 0.5rem;
-    opacity: 0.9;
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    animation: fadeInUp 1s ease-out;
 }
 
 .hero-content p {
-    margin-top: 1rem;
-    font-size: 1.2rem;
-    opacity: 0.7;
+    font-size: 1.5rem;
+    margin-bottom: 2rem;
+    animation: fadeInUp 1.2s ease-out;
 }
 
 .btn {
-    display: inline-block;
-    background: #fff;
-    color: #000;
-    padding: 1rem 2.5rem;
-    border-radius: 50px;
-    margin-top: 2rem;
+    background: var(--secondary);
+    color: var(--light);
+    padding: 1rem 2rem;
     text-decoration: none;
-    font-weight: 600;
-    border: 2px solid #fff;
-    transition: all 0.3s ease;
+    border-radius: 5px;
+    transition: background 0.3s;
+    display: inline-block;
 }
 
 .btn:hover {
-    background: transparent;
-    color: #fff;
-    box-shadow: 0 0 20px rgba(255,255,255,0.5);
+    background: var(--primary);
 }
 
-/* === SECTION STYLES === */
-section {
+.stages, .prizes, .register-form, .login-form, .dashboard, .admin-dashboard, .judge-panel, .results {
     padding: 5rem 2rem;
-    text-align: center;
-}
-
-section .container {
-    width: 80%;
-    max-width: 1000px;
+    max-width: 1200px;
     margin: 0 auto;
-    background: rgba(255,255,255,0.05);
-    border-radius: 15px;
-    padding: 3rem;
-    border: 1px solid rgba(255,255,255,0.1);
-    transition: all 0.3s ease;
 }
 
-section .container:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 0 40px rgba(255,255,255,0.05);
-}
-
-/* === THEMES === */
-.themes ul {
-    list-style: none;
-    margin-top: 2rem;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1rem;
-}
-
-.themes li {
-    padding: 1rem;
-    background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 10px;
-    transition: 0.3s;
-}
-
-.themes li:hover {
-    background: rgba(255,255,255,0.15);
-    transform: scale(1.05);
-}
-
-/* === TERMS === */
-.terms p {
-    margin: 1rem 0;
-    opacity: 0.8;
-    font-size: 1.1rem;
-}
-
-/* === FOOTER === */
-footer {
+.stages h2, .prizes h2, .register-form h2, .login-form h2, .dashboard h2, .admin-dashboard h2, .judge-panel h2, .results h2 {
     text-align: center;
-    padding: 2rem;
-    border-top: 1px solid rgba(255,255,255,0.2);
-    background: #000;
-    color: rgba(255,255,255,0.6);
-}
-
-/* === ANIMATIONS === */
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(40px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* === SCROLLBAR === */
-::-webkit-scrollbar {
-    width: 8px;
-}
-::-webkit-scrollbar-thumb {
-    background: #fff;
-    border-radius: 10px;
-}
-
-/* === RESPONSIVE === */
-@media (max-width: 768px) {
-    body {
-        padding-top: 180px; /* Increased padding to fully prevent header overlap */
-    }
-
-    .nav-container {
-        flex-direction: column;
-        padding: 1rem;
-    }
-
-    .nav-container .logo {
-        margin-bottom: 1rem;
-    }
-
-    .nav-container ul {
-        flex-direction: column;
-        background: rgba(0, 0, 0, 0.95);
-        position: absolute;
-        top: 100%;
-        left: 0;
-        width: 100%;
-        display: none;
-    }
-
-    .nav-container ul.show {
-        display: flex;
-    }
-
-    .hero-content h2 {
-        font-size: 2.5rem;
-    }
-
-    section {
-        padding: 3rem 1rem;
-    }
-
-    section .container {
-        width: 95%;
-        padding: 2rem;
-    }
-
-    .themes ul {
-        grid-template-columns: 1fr;
-    }
-
-    form {
-        width: 95%;
-        padding: 2rem;
-    }
-
-    .register-form {
-        padding: 5rem 1rem 3rem;
-    }
-}
-/* === REGISTRATION FORM ENHANCEMENTS === */
-.register-form {
-    padding: 7rem 2rem 5rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    background: linear-gradient(145deg, #000 0%, #0a0a0a 100%);
-    min-height: 100vh;
-}
-
-.register-form h2 {
-    font-size: 2.5rem;
     margin-bottom: 2rem;
-    text-shadow: 0 0 15px rgba(255,255,255,0.2);
+    color: var(--primary);
+}
+
+.stage-cards, .prize-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.card, .prize {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2rem;
+    border-radius: 10px;
+    text-align: center;
+    transition: transform 0.3s;
+}
+
+.card:hover, .prize:hover {
+    transform: translateY(-10px);
+}
+
+.card h3 {
+    color: var(--secondary);
+    margin-bottom: 1rem;
 }
 
 form {
-    background: rgba(255,255,255,0.05);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 20px;
-    padding: 2.5rem;
-    width: 90%;
-    max-width: 700px;
-    box-shadow: 0 0 40px rgba(255,255,255,0.05);
-    transition: all 0.5s ease;
+    max-width: 600px;
+    margin: 0 auto;
+    display: grid;
+    gap: 1rem;
 }
 
-form:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 0 60px rgba(255,255,255,0.1);
-}
-
-.form-group {
-    margin-bottom: 1.5rem;
-    text-align: left;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
+input, select, button {
+    padding: 1rem;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
 }
 
 input, select {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--light);
+}
+
+button {
+    background: var(--gradient);
+    color: var(--light);
+    cursor: pointer;
+    transition: opacity 0.3s;
+}
+
+button:hover {
+    opacity: 0.8;
+}
+
+.leaderboard table {
     width: 100%;
-    padding: 0.8rem;
-    background: rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.3);
-    color: #fff;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-}
-
-input:focus, select:focus {
-    outline: none;
-    border-color: #fff;
-    box-shadow: 0 0 10px rgba(255,255,255,0.4);
-}
-
-.form-step {
-    display: none;
-    animation: slideFade 0.6s ease;
-}
-.form-step.active { display: block; }
-
-@keyframes slideFade {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.qr-box {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin: 1.5rem 0;
-}
-.qr-box img {
-    width: 100%;
-    max-width: 300px;
-    height: auto;
+    border-collapse: collapse;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 10px;
-    box-shadow: 0 0 25px rgba(255,255,255,0.1);
-    object-fit: contain;
+    overflow: hidden;
 }
 
-.form-navigation {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 2rem;
-}
-
-.nav-btn {
-    background: #fff;
-    color: #000;
-    border: none;
-    padding: 0.8rem 1.8rem;
-    border-radius: 30px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.nav-btn:hover {
-    background: transparent;
-    color: #fff;
-    box-shadow: 0 0 20px rgba(255,255,255,0.3);
-    border: 1px solid #fff;
-}
-
-.error {
-    font-size: 0.8rem;
-    color: red;
-}
-
-.agree {
-    text-align: left;
-}
-.agree a { color: #fff; text-decoration: underline; }
-
-/* Team Size Selection */
-.team-size-group {
-    margin-bottom: 1.5rem;
+.leaderboard th, .leaderboard td {
+    padding: 1rem;
     text-align: left;
 }
 
-.team-size-options {
-    display: flex;
-    gap: 1rem;
-    margin-top: 0.5rem;
+.leaderboard th {
+    background: var(--gradient);
+    color: var(--light);
 }
 
-.team-size-btn {
-    background: #000;
-    color: #fff;
-    border: 2px solid #fff;
-    padding: 0.8rem 1.2rem;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    flex: 1;
-    max-width: 60px;
+.leaderboard tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.05);
 }
 
-.team-size-btn:hover, .team-size-btn.selected {
-    background: #fff;
-    color: #000;
+footer {
+    text-align: center;
+    padding: 2rem;
+    background: rgba(0, 0, 0, 0.8);
 }
 
-/* Fade animation reuse */
-.fade-in-up {
-    animation: fadeInUp 1s ease-out;
-}
-/* === FLOATING GRAYSCALE ORBS BACKGROUND === */
-.bg-orb {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    z-index: -1;
-}
-.orb {
-    position: absolute;
-    width: 150px;
-    height: 150px;
-    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
-    border-radius: 50%;
-    animation: floatOrb linear infinite;
-    filter: blur(60px);
-}
-@keyframes floatOrb {
-    0% { transform: translateY(0) translateX(0) scale(1); opacity: 0.7; }
-    50% { transform: translateY(-40px) translateX(20px) scale(1.2); opacity: 0.4; }
-    100% { transform: translateY(0) translateX(0) scale(1); opacity: 0.7; }
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-/* === GLOBAL CONTAINER REVEAL ANIMATION === */
-.reveal {
-    opacity: 0;
-    transform: translateY(60px);
-    transition: all 1s cubic-bezier(0.19, 1, 0.22, 1);
-}
-.reveal.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .nav-container {
+        flex-direction: column;
+        text-align: center;
+    }
 
-/* === CURSOR FOLLOW GLOW === */
-.cursor-glow {
-    position: fixed;
-    top: 0; left: 0;
-    width: 50px; height: 50px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
-    pointer-events: none;
-    mix-blend-mode: screen;
-    transform: translate(-50%, -50%);
-    z-index: 9999;
-    transition: transform 0.1s ease;
-}
+    .nav-container ul {
+        margin-top: 1rem;
+    }
 
-/* === HIGH TRANSITION EFFECTS FOR HOME PAGE === */
-.hero-content h2, .hero-content h3, .hero-content p, .btn {
-    animation: heroRise 1.2s ease forwards;
-    opacity: 0;
-}
-@keyframes heroRise {
-    0% { opacity: 0; transform: translateY(50px) scale(0.95); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
-}
+    .hero-content h2 {
+        font-size: 2rem;
+    }
 
-.stage-cards .card, .prizes .container, .rules .container, .contact .container {
-    transform: translateY(50px);
-    opacity: 0;
-    transition: all 1s cubic-bezier(0.19, 1, 0.22, 1);
-}
-.stage-cards .card.visible, .prizes .container.visible, .rules .container.visible, .contact .container.visible {
-    transform: translateY(0);
-    opacity: 1;
-}
+    .hero-content p {
+        font-size: 1.2rem;
+    }
 
-/* === HERO PARALLAX GLOW === */
-.hero::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 120%;
-    height: 50%;
-    background: radial-gradient(circle at center, rgba(255,255,255,0.05), transparent 70%);
-    filter: blur(60px);
-    animation: heroGlow 6s ease-in-out infinite;
-}
-@keyframes heroGlow {
-    0%,100% { transform: translateX(-50%) scale(1); opacity: 0.7; }
-    50% { transform: translateX(-50%) scale(1.2); opacity: 1; }
-}
-
-/* === REGISTER PAGE FLOATING ORBS === */
-.register-form {
-    position: relative;
-    overflow: hidden;
-}
-.register-form::before, .register-form::after {
-    content: '';
-    position: absolute;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, rgba(255,255,255,0.07) 0%, transparent 70%);
-    border-radius: 50%;
-    filter: blur(90px);
-    animation: drift 8s infinite ease-in-out alternate;
-    z-index: -1;
-}
-.register-form::before {
-    top: 10%;
-    left: -10%;
-}
-.register-form::after {
-    bottom: 10%;
-    right: -10%;
-}
-@keyframes drift {
-    0% { transform: translate(0,0) scale(1); opacity: 0.4; }
-    50% { transform: translate(40px, -40px) scale(1.2); opacity: 0.6; }
-    100% { transform: translate(0,0) scale(1); opacity: 0.4; }
+    .stage-cards, .prize-list {
+        grid-template-columns: 1fr;
+    }
 }

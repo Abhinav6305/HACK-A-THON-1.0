@@ -5,8 +5,9 @@ from pathlib import Path
 
 from flask import (
     Flask, render_template, request, redirect, url_for,
-    send_file, abort, flash, RequestEntityTooLarge
+    send_file, flash
 )
+from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.utils import secure_filename
 
 from sqlalchemy import (
@@ -17,7 +18,6 @@ from sqlalchemy.orm import sessionmaker, declarative_base, scoped_session
 # Cloudinary for file persistence
 import cloudinary
 import cloudinary.uploader
-from cloudinary.utils import cloudinary_url
 
 # Configure Cloudinary (set these in Render env vars)
 cloudinary.config(
@@ -106,7 +106,7 @@ def _save_upload(file_storage, prefix):
             resource_type="auto"
         )
         return result['secure_url']
-    except Exception as e:
+    except Exception:
         app.logger.exception("Cloudinary upload failed")
         return None
 
@@ -184,7 +184,7 @@ def register():
         db.commit()
         flash("Registration successful!", "success")
         return redirect(url_for("registration_success"))
-    except Exception as e:
+    except Exception:
         db.rollback()
         app.logger.exception("Registration error")
         flash("Something went wrong while saving. Please try again.", "error")
