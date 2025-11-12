@@ -3,5 +3,6 @@ Flask_SQLAlchemy==3.1.1
 psycopg2-binary==2.9.9
 python-dotenv==1.0.0
 email-validator==2.2.0
+transformers==4.44.2
+torch==2.3.1
 gunicorn==21.2.0
-requests==2.31.0
