@@ -1,23 +1,30 @@
-import os, io, csv, datetime, re
-from flask import Flask, request, render_template, redirect, url_for, flash, session, send_file, jsonify, abort
+import os
+import io
+import csv
+import datetime
+import re
+from flask import (
+    Flask, request, render_template, redirect, url_for,
+    flash, session, send_file, jsonify, abort
+)
 from flask_sqlalchemy import SQLAlchemy
 from email_validator import validate_email, EmailNotValidError
-from ai_reviewer import evaluate_abstract  # 🤖 AI evaluation
+from ai_reviewer import evaluate_abstract  # 🤖 AI evaluation integration
 
 # ------------------ Config ------------------
-app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "hackathon_secret_key")
+app = Flask(__name__, template_folder="templates", static_folder="static")
+app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
 
-# Database setup
-db_url = os.getenv("DATABASE_URL", "sqlite:///database.db")
-if db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
-app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+# Database Configuration
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///database.db")
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
 db = SQLAlchemy(app)
 
-# ------------------ Database Models ------------------
+# ------------------ Models ------------------
 class Team(db.Model):
     __tablename__ = "teams"
     id = db.Column(db.Integer, primary_key=True)
@@ -32,56 +39,52 @@ class Team(db.Model):
     transaction_id = db.Column(db.String(120), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     status = db.Column(db.String(50), default="submitted")
-    abstract_score = db.Column(db.Integer, nullable=True)  # 🧠 AI score field
-
-
-# ------------------ Helpers ------------------
-def allowed_file(filename, exts):
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in exts
-
+    abstract_score = db.Column(db.Integer, nullable=True)  # AI abstract score
 
 # ------------------ Routes ------------------
 @app.route("/")
 def home():
     return render_template("index.html")
 
-
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
         try:
-            team_name = request.form["team_name"].strip()
-            leader_name = request.form["leader_name"].strip()
-            leader_email = request.form["leader_email"].strip()
-            leader_phone = request.form["leader_phone"].strip()
-            leader_company = request.form["leader_company"].strip()
+            team_name = request.form["team_name"]
+            leader_name = request.form["leader_name"]
+            leader_email = request.form["leader_email"]
+            leader_phone = request.form["leader_phone"]
+            leader_company = request.form["leader_company"]
             team_size = int(request.form["team_size"])
-            transaction_id = request.form["transaction_id"].strip()
+            transaction_id = request.form["transaction_id"]
 
-            # Validate email
-            validate_email(leader_email)
+            # Email validation
+            try:
+                validate_email(leader_email)
+            except EmailNotValidError:
+                flash("Invalid email address.", "error")
+                return redirect(url_for("register"))
 
-            # Save abstract PDF
-            abstract_file = request.files.get("abstract")
-            abstract_rel, abs_path = None, None
-            if abstract_file and allowed_file(abstract_file.filename, {"pdf"}):
-                abs_filename = f"{team_name}_abstract.pdf"
-                abs_path = os.path.join("static/uploads/abstracts", abs_filename)
-                os.makedirs(os.path.dirname(abs_path), exist_ok=True)
-                abstract_file.save(abs_path)
-                abstract_rel = f"uploads/abstracts/{abs_filename}"
+            # File uploads
+            abstract_file = request.files["abstract"]
+            payment_photo = request.files["transaction_photo"]
 
-            # Save payment screenshot
-            txn_file = request.files.get("transaction_photo")
-            txn_rel = None
-            if txn_file and allowed_file(txn_file.filename, {"png", "jpg", "jpeg"}):
-                txn_filename = f"{team_name}_txn.png"
-                txn_path = os.path.join("static/uploads/payments", txn_filename)
-                os.makedirs(os.path.dirname(txn_path), exist_ok=True)
-                txn_file.save(txn_path)
-                txn_rel = f"uploads/payments/{txn_filename}"
+            upload_folder = os.path.join(app.static_folder, "uploads")
+            os.makedirs(upload_folder, exist_ok=True)
 
-            # Create team entry
+            abstract_filename = f"{team_name}_abstract.pdf"
+            payment_filename = f"{team_name}_payment.jpg"
+
+            abstract_path = os.path.join(upload_folder, abstract_filename)
+            payment_path = os.path.join(upload_folder, payment_filename)
+
+            abstract_file.save(abstract_path)
+            payment_photo.save(payment_path)
+
+            abstract_rel = f"uploads/{abstract_filename}"
+            payment_rel = f"uploads/{payment_filename}"
+
+            # Save team in DB
             team = Team(
                 team_name=team_name,
                 leader_name=leader_name,
@@ -89,40 +92,37 @@ def register():
                 leader_phone=leader_phone,
                 leader_company=leader_company,
                 team_size=team_size,
-                abstract_path=abstract_rel,
-                payment_path=txn_rel,
                 transaction_id=transaction_id,
+                abstract_path=abstract_rel,
+                payment_path=payment_rel,
             )
-
             db.session.add(team)
             db.session.commit()
 
-            # ------------------ AI Abstract Evaluation ------------------
-            if abs_path:
-                with open(abs_path, "rb") as f:
+            # Evaluate abstract using AI model 🤖
+            try:
+                with open(os.path.join("static", abstract_rel), "rb") as f:
                     text = f.read().decode("utf-8", errors="ignore")
-                score = evaluate_abstract(text)
-                team.abstract_score = score
-                db.session.commit()
+                    team.abstract_score = evaluate_abstract(text)
+                    db.session.commit()
+            except Exception as e:
+                print("AI Evaluation Failed:", e)
 
             flash("Registration successful!", "success")
             return redirect(url_for("registration_success"))
 
-        except EmailNotValidError:
-            flash("Invalid email address. Please check again.", "danger")
         except Exception as e:
-            print("❌ Error during registration:", e)
-            flash("Registration failed. Please try again.", "danger")
+            print("Registration error:", e)
+            flash("An error occurred during registration. Please try again.", "error")
+            return redirect(url_for("register"))
 
     return render_template("register.html")
-
 
 @app.route("/registration_success")
 def registration_success():
     return render_template("success.html")
 
-
-# ------------------ Admin Login ------------------
+# ------------------ Admin ------------------
 @app.route("/admin", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
@@ -133,38 +133,55 @@ def admin_login():
             session["admin"] = True
             return redirect(url_for("admin_dashboard"))
         else:
-            flash("Invalid credentials", "danger")
-
+            flash("Invalid credentials", "error")
     return render_template("admin_login.html")
 
-
-# ------------------ Admin Dashboard ------------------
 @app.route("/admin_dashboard")
 def admin_dashboard():
     if not session.get("admin"):
         return redirect(url_for("admin_login"))
+
     teams = Team.query.order_by(Team.created_at.desc()).all()
     return render_template("admin_dashboard.html", teams=teams)
 
-
-# ------------------ Download CSV ------------------
 @app.route("/download_csv")
 def download_csv():
     if not session.get("admin"):
         abort(403)
 
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["Team Name", "Leader", "Email", "Phone", "College", "Transaction ID", "Abstract Score", "Submitted On"])
+    teams = Team.query.all()
+    proxy = io.StringIO()
+    writer = csv.writer(proxy)
+    writer.writerow([
+        "Team Name", "Leader Name", "Email", "Phone", "College",
+        "Team Size", "Transaction ID", "Abstract Path", "Payment Path", "Score", "Created At"
+    ])
 
-    for t in Team.query.all():
-        writer.writerow([t.team_name, t.leader_name, t.leader_email, t.leader_phone, t.leader_company, t.transaction_id, t.abstract_score or "-", t.created_at])
+    for t in teams:
+        writer.writerow([
+            t.team_name, t.leader_name, t.leader_email, t.leader_phone,
+            t.leader_company, t.team_size, t.transaction_id,
+            t.abstract_path, t.payment_path, t.abstract_score, t.created_at
+        ])
 
-    output.seek(0)
-    return send_file(io.BytesIO(output.getvalue().encode()), mimetype="text/csv", as_attachment=True, download_name="registrations.csv")
+    mem = io.BytesIO()
+    mem.write(proxy.getvalue().encode("utf-8"))
+    mem.seek(0)
+    proxy.close()
+    return send_file(
+        mem,
+        mimetype="text/csv",
+        download_name="registrations.csv",
+        as_attachment=True
+    )
 
+@app.route("/logout")
+def logout():
+    session.pop("admin", None)
+    flash("Logged out successfully.", "success")
+    return redirect(url_for("admin_login"))
 
-# ------------------ Run App ------------------
+# ------------------ Start App ------------------
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
