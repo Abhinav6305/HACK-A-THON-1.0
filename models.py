@@ -74,3 +74,12 @@ class ProblemStatement(db.Model):
     description = db.Column(db.Text, nullable=False)
     domain = db.Column(db.String(100), nullable=False)
     level = db.Column(db.String(20), nullable=False)  # beginner, intermediate, advanced
+
+class Ideathon(db.Model):
+    __tablename__ = 'ideathons'
+    ideathon_id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(db.Integer, db.ForeignKey('teams.team_id'), nullable=False)
+    idea_title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())

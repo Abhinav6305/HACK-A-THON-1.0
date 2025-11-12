@@ -1,44 +1,5 @@
-# TODO for HACK-A-THON 1.0 Interface
+# TODO: Add Ideathon Model
 
-- [x] Create requirements.txt with necessary dependencies
-- [x] Create models.py for database schema using SQLAlchemy
-- [x] Create ai_reviewer.py for AI abstract evaluation using OpenAI API
-- [x] Create app.py with Flask routes and logic
-- [x] Create templates/home.html for landing page
-- [x] Create templates/register.html for team registration
-- [x] Create templates/login.html for login page
-- [x] Create templates/dashboard.html for participant dashboard
-- [x] Create templates/admin.html for admin dashboard
-- [x] Create templates/judge.html for judge panel
-- [x] Create templates/results.html for results and leaderboard
-- [x] Create static/css/styles.css for Denovate-style styling
-- [x] Create static/js/scripts.js for dynamic frontend interactions
-- [x] Create README.md with setup instructions
-- [x] Install dependencies from requirements.txt
-- [x] Run Flask app and test basic functionality
-- [x] Update home.html to include stages with dates (Stage 1: Ideathon 20 Nov, Stage 2: Coding Contest 1-2 Dec, Stage 3: Hackathon 5-6 Dec)
-- [x] Add /ideathon route for Stage 1: Virtual Ideathon (upload PPT, AI evaluation)
-- [x] Create templates/ideathon.html for PPT upload and AI score display
-- [x] Add /coding_contest route for Stage 2: Virtual Coding Contest (link to contest platform)
-- [x] Create templates/coding_contest.html for coding contest interface
-- [x] Update models.py if needed for PPT submissions
-- [x] Update dashboard to show stage progress and links to stages
-- [x] Test new pages for functionality
-- [x] Add default admin and judge users for testing
-- [x] Update to only two stages: Ideathon and Hackathon
-- [x] Revise registration to 3-page process with dynamic team members, PDF abstract (max 10MB), unique email
-- [x] Remove coding contest interface
-- [x] Update admin account to abhinavrishisaka@gmail.com with password Aishnav@6305
-- [x] Install dependencies and test app startup
-- [x] App running successfully without errors
-- [x] Test user registration via curl with new flow
-- [x] Test login for participant, admin, judge
-- [x] Test participant dashboard access
-- [x] Test admin dashboard and stage updates
-- [x] Test judge panel and evaluations
-- [x] Test results leaderboard
-- [x] Test AI abstract evaluation (requires API key)
-- [x] Test database persistence
-- [x] Test error handling and edge cases
-- [x] Verify frontend responsiveness (manual check needed)
-- [x] Fix QR code path in register.html
+- [x] Add Ideathon model to models.py with fields: ideathon_id, team_id, idea_title, description, status, timestamp
+- [x] Run db.create_all() to create the new table in the database
+- [x] Test the model by importing and verifying it works

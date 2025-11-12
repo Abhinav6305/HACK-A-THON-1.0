@@ -119,7 +119,7 @@ def _file_len(file_storage):
     return size
 
 # ------------------ Routes ------------------
-@app.before_first_request
+@app.before_request
 def init_db():
     db.create_all()
 
