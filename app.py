@@ -8,20 +8,22 @@ from flask import (
 )
 from flask_sqlalchemy import SQLAlchemy
 from email_validator import validate_email, EmailNotValidError
-from ai_reviewer import evaluate_abstract
 
-# ------------------ App Config ------------------
+# --------------------------------------------------
+# App Config
+# --------------------------------------------------
 app = Flask(__name__, template_folder="templates", static_folder="static")
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
 
-# ------------------ Database Config ------------------
+# --------------------------------------------------
+# Database Config
+# --------------------------------------------------
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
-    print("⚠️ DATABASE_URL not found — using SQLite fallback.")
+    print("⚠️ DATABASE_URL not found — using local SQLite fallback.")
     DATABASE_URL = "sqlite:///database.db"
 
-# PostgreSQL fix for Render
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
@@ -30,31 +32,37 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
-# ------------------ Database Model ------------------
+# --------------------------------------------------
+# Database Model
+# --------------------------------------------------
 class Team(db.Model):
     __tablename__ = "teams"
+
     id = db.Column(db.Integer, primary_key=True)
     team_name = db.Column(db.String(200), nullable=False)
     leader_name = db.Column(db.String(200), nullable=False)
-    leader_email = db.Column(db.String(200), nullable=False, index=True)
+    leader_email = db.Column(db.String(200), nullable=False)
     leader_phone = db.Column(db.String(50), nullable=False)
     leader_company = db.Column(db.String(200), nullable=False)
-    team_size = db.Column(db.Integer, nullable=False, default=3)
+    team_size = db.Column(db.Integer, nullable=False)
+    transaction_id = db.Column(db.String(200), nullable=False)
+
     abstract_path = db.Column(db.String(500), nullable=True)
     payment_path = db.Column(db.String(500), nullable=True)
-    transaction_id = db.Column(db.String(120), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
     status = db.Column(db.String(50), default="submitted")
     abstract_score = db.Column(db.Integer, nullable=True)
 
-# ------------------ Routes ------------------
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
+
+# --------------------------------------------------
+# PUBLIC ROUTES
+# --------------------------------------------------
 @app.route("/")
 def home():
     return render_template("home.html")
 
-
-# ------------------ Register ------------------
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -68,29 +76,30 @@ def register():
             team_size = int(request.form["team_size"])
             transaction_id = request.form["transaction_id"]
 
-            # Email validation
+            # Validate email
             try:
                 validate_email(leader_email)
             except EmailNotValidError:
-                flash("Invalid email address.", "error")
+                flash("❌ Invalid email address!", "error")
                 return redirect(url_for("register"))
 
-            # File uploads
+            # Upload files
             abstract_file = request.files["abstract"]
-            payment_photo = request.files["transaction_photo"]
+            payment_file = request.files["transaction_photo"]
 
-            upload_folder = os.path.join(app.static_folder, "uploads")
-            os.makedirs(upload_folder, exist_ok=True)
+            upload_dir = os.path.join(app.static_folder, "uploads")
+            os.makedirs(upload_dir, exist_ok=True)
 
             abstract_filename = f"{team_name}_abstract.pdf"
             payment_filename = f"{team_name}_payment.jpg"
 
-            abstract_path = os.path.join(upload_folder, abstract_filename)
-            payment_path = os.path.join(upload_folder, payment_filename)
+            abstract_path = os.path.join(upload_dir, abstract_filename)
+            payment_path = os.path.join(upload_dir, payment_filename)
 
             abstract_file.save(abstract_path)
-            payment_photo.save(payment_path)
+            payment_file.save(payment_path)
 
+            # Relative paths for HTML display
             abstract_rel = f"uploads/{abstract_filename}"
             payment_rel = f"uploads/{payment_filename}"
 
@@ -104,26 +113,18 @@ def register():
                 team_size=team_size,
                 transaction_id=transaction_id,
                 abstract_path=abstract_rel,
-                payment_path=payment_rel
+                payment_path=payment_rel,
             )
+
             db.session.add(team)
             db.session.commit()
 
-            # AI abstract evaluation
-            try:
-                with open(os.path.join("static", abstract_rel), "rb") as f:
-                    text = f.read().decode("utf-8", errors="ignore")
-                    team.abstract_score = evaluate_abstract(text)
-                    db.session.commit()
-            except Exception as e:
-                print("AI evaluation failed:", e)
-
-            flash("Registration successful!", "success")
+            flash("🎉 Registration Successful!", "success")
             return redirect(url_for("registration_success"))
 
         except Exception as e:
-            print("Registration error:", e)
-            flash("An error occurred during registration. Please try again.", "error")
+            print("Registration Error:", e)
+            flash("❌ Something went wrong during registration!", "error")
             return redirect(url_for("register"))
 
     return render_template("register.html")
@@ -131,11 +132,12 @@ def register():
 
 @app.route("/registration_success")
 def registration_success():
-    return render_template("registration_success.html")
+    return render_template("success.html")
 
 
-# ------------------ Admin ------------------
-
+# --------------------------------------------------
+# ADMIN ROUTES
+# --------------------------------------------------
 @app.route("/admin_login", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
@@ -146,7 +148,7 @@ def admin_login():
             session["admin"] = True
             return redirect(url_for("admin_dashboard"))
         else:
-            flash("Invalid credentials", "error")
+            flash("❌ Invalid credentials!", "error")
 
     return render_template("admin_login.html")
 
@@ -156,16 +158,9 @@ def admin_dashboard():
     if not session.get("admin"):
         return redirect(url_for("admin_login"))
 
-    # FIX: If table doesn’t exist, create it
-    try:
-        teams = Team.query.order_by(Team.created_at.desc()).all()
-    except Exception as e:
-        print("Teams table missing — creating...")
-        with app.app_context():
-            db.create_all()
-        teams = []
-
+    teams = Team.query.order_by(Team.created_at.desc()).all()
     total = len(teams)
+
     return render_template("admin_dashboard.html", teams=teams, total=total)
 
 
@@ -178,16 +173,19 @@ def download_csv():
 
     proxy = io.StringIO()
     writer = csv.writer(proxy)
+
     writer.writerow([
         "Team Name", "Leader Name", "Email", "Phone", "College",
-        "Team Size", "Transaction ID", "Abstract Path", "Payment Path", "Score", "Created At"
+        "Team Size", "Transaction ID", "Abstract", "Payment",
+        "Score", "Created At"
     ])
 
     for t in teams:
         writer.writerow([
             t.team_name, t.leader_name, t.leader_email, t.leader_phone,
             t.leader_company, t.team_size, t.transaction_id,
-            t.abstract_path, t.payment_path, t.abstract_score, t.created_at
+            t.abstract_path, t.payment_path, t.abstract_score,
+            t.created_at
         ])
 
     mem = io.BytesIO(proxy.getvalue().encode("utf-8"))
@@ -209,14 +207,18 @@ def logout():
     return redirect(url_for("admin_login"))
 
 
-# ------------------ Main ------------------
-
-if __name__ == "__main__":
+# --------------------------------------------------
+# DB INIT ROUTE (IMPORTANT FOR RENDER)
+# --------------------------------------------------
+@app.route("/init_db")
+def init_db():
     with app.app_context():
-        try:
-            db.create_all()
-            print("Database tables ensured.")
-        except Exception as e:
-            print("DB init error:", e)
+        db.create_all()
+    return "✅ Database initialized successfully!"
 
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
+
+# --------------------------------------------------
+# RUN APP
+# --------------------------------------------------
+if __name__ == "__main__":
+    app.run(debug=True)
