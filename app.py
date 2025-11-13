@@ -2,25 +2,25 @@ import os
 import io
 import csv
 import datetime
-import re
 from flask import (
     Flask, request, render_template, redirect, url_for,
     flash, session, send_file, jsonify, abort
 )
 from flask_sqlalchemy import SQLAlchemy
 from email_validator import validate_email, EmailNotValidError
-from ai_reviewer import evaluate_abstract  # 🤖 AI evaluation integration
+from ai_reviewer import evaluate_abstract  # AI model
 
-# ------------------ Config ------------------
+# ------------------ Flask Config ------------------
 app = Flask(__name__, template_folder="templates", static_folder="static")
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
 
-# ------------------ Database Configuration ------------------
+# ------------------ Database Config ------------------
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    print("⚠️ DATABASE_URL not found, using local SQLite fallback.")
+    print("⚠️ DATABASE_URL not found, using SQLite fallback.")
     DATABASE_URL = "sqlite:///database.db"
 
+# Render issue fix
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
@@ -28,9 +28,10 @@ app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
-# ------------------ Models ------------------
+# ------------------ MODEL ------------------
 class Team(db.Model):
     __tablename__ = "teams"
+
     id = db.Column(db.Integer, primary_key=True)
     team_name = db.Column(db.String(200), nullable=False)
     leader_name = db.Column(db.String(200), nullable=False)
@@ -43,13 +44,15 @@ class Team(db.Model):
     transaction_id = db.Column(db.String(120), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     status = db.Column(db.String(50), default="submitted")
-    abstract_score = db.Column(db.Integer, nullable=True)  # AI abstract score
+    abstract_score = db.Column(db.Integer, nullable=True)
 
-# ------------------ Routes ------------------
+# ------------------ ROUTES ------------------
+
 @app.route("/")
 def home():
     return render_template("home.html")
 
+# ------------------ REGISTER ------------------
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
@@ -88,7 +91,7 @@ def register():
             abstract_rel = f"uploads/{abstract_filename}"
             payment_rel = f"uploads/{payment_filename}"
 
-            # Save team in DB
+            # Save to DB
             team = Team(
                 team_name=team_name,
                 leader_name=leader_name,
@@ -103,7 +106,7 @@ def register():
             db.session.add(team)
             db.session.commit()
 
-            # Evaluate abstract using AI model 🤖
+            # AI Abstract Score
             try:
                 with open(os.path.join("static", abstract_rel), "rb") as f:
                     text = f.read().decode("utf-8", errors="ignore")
@@ -117,7 +120,7 @@ def register():
 
         except Exception as e:
             print("Registration error:", e)
-            flash("An error occurred during registration. Please try again.", "error")
+            flash("An error occurred during registration.", "error")
             return redirect(url_for("register"))
 
     return render_template("register.html")
@@ -126,25 +129,26 @@ def register():
 def registration_success():
     return render_template("success.html")
 
-# ------------------ Admin Routes ------------------
-@app.route("/admin", methods=["GET", "POST"])
+
+# ------------------ ADMIN SYSTEM ------------------
+
+ADMIN_EMAIL = "origin@stpetershyd.com"
+ADMIN_PASS = "#C0re0r!g!n"
+
+# Fix: Correct separate login route
+@app.route("/admin_login", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
         email = request.form.get("email")
         password = request.form.get("password")
 
-        if email == "origin@stpetershyd.com" and password == "#C0re0r!g!n":
+        if email == ADMIN_EMAIL and password == ADMIN_PASS:
             session["admin"] = True
             return redirect(url_for("admin_dashboard"))
-        else:
-            flash("Invalid credentials", "error")
-    return render_template("admin_login.html")
 
-@app.route("/refresh")
-def refresh():
-    if not session.get("admin"):
-        return redirect(url_for("admin_login"))
-    return redirect(url_for("admin_dashboard"))
+        flash("Invalid credentials", "error")
+
+    return render_template("admin_login.html")
 
 @app.route("/admin_dashboard")
 def admin_dashboard():
@@ -155,6 +159,20 @@ def admin_dashboard():
     total = len(teams)
     return render_template("admin_dashboard.html", teams=teams, total=total)
 
+@app.route("/refresh")
+def refresh():
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+    return redirect(url_for("admin_dashboard"))
+
+@app.route("/logout")
+def logout():
+    session.pop("admin", None)
+    flash("Logged out successfully.", "success")
+    return redirect(url_for("admin_login"))
+
+
+# ------------------ CSV DOWNLOAD ------------------
 @app.route("/download_csv")
 def download_csv():
     if not session.get("admin"):
@@ -163,9 +181,11 @@ def download_csv():
     teams = Team.query.all()
     proxy = io.StringIO()
     writer = csv.writer(proxy)
+
     writer.writerow([
         "Team Name", "Leader Name", "Email", "Phone", "College",
-        "Team Size", "Transaction ID", "Abstract Path", "Payment Path", "Score", "Created At"
+        "Team Size", "Transaction ID", "Abstract Path", "Payment Path",
+        "Score", "Created At"
     ])
 
     for t in teams:
@@ -179,6 +199,7 @@ def download_csv():
     mem.write(proxy.getvalue().encode("utf-8"))
     mem.seek(0)
     proxy.close()
+
     return send_file(
         mem,
         mimetype="text/csv",
@@ -186,17 +207,12 @@ def download_csv():
         as_attachment=True
     )
 
-@app.route("/logout")
-def logout():
-    session.pop("admin", None)
-    flash("Logged out successfully.", "success")
-    return redirect(url_for("admin_login"))
-
-# ------------------ Start App ------------------
+# ------------------ INIT ------------------
 if __name__ == "__main__":
     with app.app_context():
         try:
             db.create_all()
         except Exception as e:
             print("DB create_all warning:", e)
+
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=True)
