@@ -1,178 +1,214 @@
-from flask import Flask, render_template, request, redirect, send_from_directory, jsonify
-from flask_sqlalchemy import SQLAlchemy
-from werkzeug.utils import secure_filename
 import os
+from flask import Flask, render_template, request, redirect, session, send_from_directory, flash
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+app.secret_key = "supersecretkey"  # Change this
 
-# ============================
-# Render-Compatible Database
-# ============================
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///hackathon.db")
+# -----------------------------
+# DATABASE CONFIG
+# -----------------------------
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-if app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgres://"):
-    app.config["SQLALCHEMY_DATABASE_URI"] = app.config["SQLALCHEMY_DATABASE_URI"].replace("postgres://", "postgresql://")
+if DATABASE_URL:
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://")
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+else:
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///local.db"
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
 db = SQLAlchemy(app)
 
-# ============================
-# Upload folder
-# ============================
-UPLOAD_FOLDER = "uploads"
+# -----------------------------
+# UPLOAD FOLDER
+# -----------------------------
+UPLOAD_FOLDER = "uploads/abstracts"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
-
-# ============================
-# Database Model (No Payment)
-# ============================
+# -----------------------------
+# DATABASE MODEL
+# -----------------------------
 class Registration(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    team_name = db.Column(db.String(200))
-    leader_name = db.Column(db.String(200))
-    leader_email = db.Column(db.String(200))
-    leader_phone = db.Column(db.String(200))
-    leader_company = db.Column(db.String(200))
-    team_size = db.Column(db.Integer)
-    members = db.Column(db.JSON)  # list of members
-    abstract_filename = db.Column(db.String(300))
+
+    team_name = db.Column(db.String(100), nullable=False)
+    leader_name = db.Column(db.String(100), nullable=False)
+    leader_email = db.Column(db.String(100), nullable=False)
+    leader_phone = db.Column(db.String(20), nullable=False)
+    leader_company = db.Column(db.String(200), nullable=False)
+
+    team_size = db.Column(db.Integer, nullable=False)
+
+    member_1_name = db.Column(db.String(100))
+    member_1_email = db.Column(db.String(100))
+    member_1_phone = db.Column(db.String(20))
+    member_1_company = db.Column(db.String(200))
+
+    member_2_name = db.Column(db.String(100))
+    member_2_email = db.Column(db.String(100))
+    member_2_phone = db.Column(db.String(20))
+    member_2_company = db.Column(db.String(200))
+
+    member_3_name = db.Column(db.String(100))
+    member_3_email = db.Column(db.String(100))
+    member_3_phone = db.Column(db.String(20))
+    member_3_company = db.Column(db.String(200))
+
+    member_4_name = db.Column(db.String(100))
+    member_4_email = db.Column(db.String(100))
+    member_4_phone = db.Column(db.String(20))
+    member_4_company = db.Column(db.String(200))
+
+    abstract_filename = db.Column(db.String(200), nullable=False)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
-# ============================
-# Init DB Route (DEV ONLY)
-# ============================
+# -----------------------------
+# INIT DB (only run once)
+# -----------------------------
 @app.route("/init_db")
 def init_db():
-    with app.app_context():
-        db.create_all()
+    db.create_all()
     return "Database initialized successfully!"
 
 
-# ============================
-# HOME PAGE
-# ============================
+# -----------------------------
+# ROUTES
+# -----------------------------
 @app.route("/")
 def home():
     return render_template("index.html")
 
 
-# ============================
-# SHOW REGISTER PAGE
-# ============================
-@app.route("/register", methods=["GET"])
-def show_register():
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+
+        team_name = request.form["team_name"]
+        leader_name = request.form["leader_name"]
+        leader_email = request.form["leader_email"]
+        leader_phone = request.form["leader_phone"]
+        leader_company = request.form["leader_company"]
+        team_size = int(request.form["team_size"])
+
+        # Abstract upload
+        abstract = request.files["abstract"]
+        abstract_filename = secure_filename(abstract.filename)
+        abstract.save(os.path.join(app.config["UPLOAD_FOLDER"], abstract_filename))
+
+        # Create DB entry
+        reg = Registration(
+            team_name=team_name,
+            leader_name=leader_name,
+            leader_email=leader_email,
+            leader_phone=leader_phone,
+            leader_company=leader_company,
+            team_size=team_size,
+            abstract_filename=abstract_filename
+        )
+
+        # Add Member Details
+        for i in range(1, team_size):
+            setattr(reg, f"member_{i}_name", request.form.get(f"member_{i}_name"))
+            setattr(reg, f"member_{i}_email", request.form.get(f"member_{i}_email"))
+            setattr(reg, f"member_{i}_phone", request.form.get(f"member_{i}_phone"))
+            setattr(reg, f"member_{i}_company", request.form.get(f"member_{i}_company"))
+
+        db.session.add(reg)
+        db.session.commit()
+
+        return redirect("/registration_success")
+
     return render_template("register.html")
 
 
-# ============================
-# HANDLE FORM SUBMISSION
-# ============================
-@app.route("/register", methods=["POST"])
-def register_team():
-
-    # STEP-1 – Team lead
-    team_name = request.form.get("team_name")
-    leader_name = request.form.get("leader_name")
-    leader_email = request.form.get("leader_email")
-    leader_phone = request.form.get("leader_phone")
-    leader_company = request.form.get("leader_company")
-
-    # STEP-2 – Team members
-    team_size = int(request.form.get("team_size"))
-    members = []
-
-    for i in range(1, team_size):
-        members.append({
-            "name": request.form.get(f"member_{i}_name"),
-            "email": request.form.get(f"member_{i}_email"),
-            "phone": request.form.get(f"member_{i}_phone"),
-            "college": request.form.get(f"member_{i}_company"),
-        })
-
-    # STEP-3 – Abstract upload
-    abstract_file = request.files["abstract"]
-    abstract_filename = secure_filename(abstract_file.filename)
-    abstract_path = os.path.join(app.config["UPLOAD_FOLDER"], abstract_filename)
-    abstract_file.save(abstract_path)
-
-    # Save to DB
-    new_reg = Registration(
-        team_name=team_name,
-        leader_name=leader_name,
-        leader_email=leader_email,
-        leader_phone=leader_phone,
-        leader_company=leader_company,
-        team_size=team_size,
-        members=members,
-        abstract_filename=abstract_filename,
-    )
-
-    db.session.add(new_reg)
-    db.session.commit()
-
-    return redirect("/registration_success")
-
-
-# ============================
-# SUCCESS PAGE
-# ============================
 @app.route("/registration_success")
 def success():
-    return render_template("success.html")
+    return render_template("registration_success.html")
 
 
-# ============================
-# ADMIN LOGIN PAGE
-# ============================
-@app.route("/admin_login")
+# -----------------------------
+# ADMIN LOGIN
+# -----------------------------
+ADMIN_EMAIL = "origin@gmail.com"
+ADMIN_PASSWORD = "origin@123"
+
+@app.route("/admin_login", methods=["GET", "POST"])
 def admin_login():
+    if request.method == "POST":
+        email = request.form["email"]
+        password = request.form["password"]
+
+        if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
+            session["admin_logged_in"] = True
+            return redirect("/admin_dashboard")
+        else:
+            flash("Invalid credentials")
+
     return render_template("admin_login.html")
 
 
-# ============================
-# ADMIN LOGIN AUTH
-# ============================
-@app.route("/admin_auth", methods=["POST"])
-def admin_auth():
-    username = request.form.get("username")
-    password = request.form.get("password")
-
-    if username == "admin" and password == "origin123":
-        return redirect("/admin_dashboard")
-    else:
-        return "Invalid credentials. Try again."
+@app.route("/admin_logout")
+def admin_logout():
+    session.clear()
+    return redirect("/admin_login")
 
 
-# ============================
+# -----------------------------
 # ADMIN DASHBOARD
-# ============================
+# -----------------------------
 @app.route("/admin_dashboard")
 def admin_dashboard():
-    registrations = Registration.query.all()
-    total_count = Registration.query.count()
-    return render_template("admin_dashboard.html", registrations=registrations, count=total_count)
+    if not session.get("admin_logged_in"):
+        return redirect("/admin_login")
+
+    registrations = Registration.query.order_by(Registration.id.desc()).all()
+
+    formatted = []
+    for reg in registrations:
+        members = []
+        for i in range(1, reg.team_size):
+            m = {
+                "name": getattr(reg, f"member_{i}_name"),
+                "email": getattr(reg, f"member_{i}_email"),
+                "phone": getattr(reg, f"member_{i}_phone"),
+                "college": getattr(reg, f"member_{i}_company"),
+            }
+            if m["name"]:
+                members.append(m)
+
+        formatted.append({
+            "id": reg.id,
+            "team_name": reg.team_name,
+            "leader_name": reg.leader_name,
+            "leader_email": reg.leader_email,
+            "leader_phone": reg.leader_phone,
+            "leader_company": reg.leader_company,
+            "team_size": reg.team_size,
+            "members": members,
+            "abstract": reg.abstract_filename,
+            "created": reg.created_at.strftime("%d-%m-%Y %I:%M %p")
+        })
+
+    return render_template("admin_dashboard.html", registrations=formatted)
 
 
-# ============================
+# -----------------------------
 # DOWNLOAD ABSTRACT
-# ============================
-@app.route('/download/<filename>')
+# -----------------------------
+@app.route("/download/<filename>")
 def download_file(filename):
-    return send_from_directory("uploads", filename, as_attachment=True)
+    return send_from_directory("uploads/abstracts", filename, as_attachment=True)
 
 
-# ============================
-# HEALTH CHECK
-# ============================
-@app.route("/healthz")
-def health():
-    return "ok"
-
-
-# ============================
-# RUN APP (LOCAL)
-# ============================
+# -----------------------------
+# MAIN
+# -----------------------------
 if __name__ == "__main__":
     app.run(debug=True)
