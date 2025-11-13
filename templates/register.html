@@ -441,29 +441,24 @@
                 </div>
             </div>
 
-            <!-- Step 3 -->
-            <div class="form-step" id="step3">
-                <div class="form-container">
-                    <div class="form-group"><label>Abstract (PDF, max 10MB)</label><input type="file" name="abstract" accept=".pdf" required></div>
-                </div>
-            </div>
+<!-- Step 3 (Final Step Now) -->
+<div class="form-step" id="step3">
+    <div class="form-container">
+        <div class="form-group">
+            <label>Abstract (PDF, max 10MB)</label>
+            <input type="file" name="abstract" accept=".pdf" required>
+        </div>
 
-            <!-- Step 4 -->
-            <div class="form-step" id="step4">
-                <div class="form-container payment-step">
-                    <h3>Payment</h3>
-                    <p>Registration fee: ₹99 per team</p>
-                    <div class="qr-box">
-                        <img src="/static/scanner/GooglePay_QR.png" alt="QR">
-                        <p>Scan & Pay</p>
-                    </div>
-                    <div class="form-group"><label>Transaction ID</label><input type="text" name="transaction_id" required></div>
-                    <div class="form-group"><label>Upload Payment Screenshot</label><input type="file" name="transaction_photo" accept="image/*" required></div>
-                    <div class="form-group agree">
-                        <label><input type="checkbox" name="agree_terms" required> I agree to the <a href="#terms">Terms & Conditions</a></label>
-                    </div>
-                </div>
-            </div>
+        <!-- Terms & Conditions moved here -->
+        <div class="form-group agree">
+            <label>
+                <input type="checkbox" name="agree_terms" required>
+                I agree to the <a href="#terms">Terms & Conditions</a>
+            </label>
+        </div>
+    </div>
+</div>
+
 
             <div class="form-navigation">
                 <button type="button" id="prevBtn" class="nav-btn">← Previous</button>
