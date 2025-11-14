@@ -6,41 +6,41 @@ import csv
 from io import StringIO
 from datetime import datetime
 
-
-# --------------------------
+# -----------------------------------------------------
 # Flask Setup
-# --------------------------
+# -----------------------------------------------------
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
-# --------------------------
-# Database (PostgreSQL)
-# --------------------------
-# Reads DATABASE_URL from Render environment
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")
+# -----------------------------------------------------
+# PostgreSQL Database Setup (Render)
+# -----------------------------------------------------
+DATABASE_URL = os.getenv("postgresql://hackathon_db_gzok_user:YqT9PxH1tJPj8F3HesGOiGHE9glD985e@dpg-d48mvf3ipnbc73djas1g-a/hackathon_db_gzok")
 
-# Required for PostgreSQL SSL in Render
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is missing! Set it in Render → Environment Variables.")
+
+# Render PostgreSQL requires SSL
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "connect_args": {"sslmode": "require"}
 }
 
 db = SQLAlchemy(app)
 
-
-# --------------------------
+# -----------------------------------------------------
 # File Upload Setup
-# --------------------------
+# -----------------------------------------------------
 UPLOAD_FOLDER = "abstracts"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
-# Ensure payment upload directory exists
-os.makedirs("static/uploads", exist_ok=True)
+SCREENSHOT_FOLDER = "static/uploads"
+os.makedirs(SCREENSHOT_FOLDER, exist_ok=True)
 
-
-# --------------------------
+# -----------------------------------------------------
 # Database Model
-# --------------------------
+# -----------------------------------------------------
 class Registration(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     team_name = db.Column(db.String(100), nullable=False)
@@ -52,40 +52,34 @@ class Registration(db.Model):
     abstract_file = db.Column(db.String(300))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-
 with app.app_context():
     db.create_all()
 
+# -----------------------------------------------------
+# Routes
+# -----------------------------------------------------
 
-# --------------------------
-# Home Page
-# --------------------------
 @app.route("/")
 def home():
     return render_template("index.html")
 
-
-# --------------------------
-# Registration Page
-# --------------------------
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-
         team_name = request.form["team_name"]
         leader_name = request.form["leader_name"]
         email = request.form["email"]
         phone = request.form["phone"]
         members = request.form["members"]
 
-        # Upload payment screenshot
-        payment_file = request.files["payment_screenshot"]
+        # Payment screenshot upload
+        payment_file = request.files.get("payment_screenshot")
         payment_filename = None
         if payment_file and payment_file.filename != "":
             payment_filename = secure_filename(payment_file.filename)
-            payment_file.save(os.path.join("static/uploads", payment_filename))
+            payment_file.save(os.path.join(SCREENSHOT_FOLDER, payment_filename))
 
-        # Upload abstract PDF
+        # Abstract upload
         abstract_file = request.files.get("abstract_file")
         abstract_filename = None
         if abstract_file and abstract_file.filename != "":
@@ -101,6 +95,7 @@ def register():
             payment_screenshot=payment_filename,
             abstract_file=abstract_filename
         )
+
         db.session.add(reg)
         db.session.commit()
 
@@ -108,15 +103,13 @@ def register():
 
     return render_template("registration.html")
 
-
 @app.route("/success")
 def success():
     return render_template("success.html")
 
-
-# --------------------------
+# -----------------------------------------------------
 # Admin Login
-# --------------------------
+# -----------------------------------------------------
 @app.route("/admin_login", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
@@ -126,19 +119,14 @@ def admin_login():
 
     return render_template("admin_login.html")
 
-
-# --------------------------
-# Admin Logout
-# --------------------------
 @app.route("/admin_logout")
 def admin_logout():
     session.pop("admin", None)
     return redirect("/admin_login")
 
-
-# --------------------------
+# -----------------------------------------------------
 # Admin Dashboard
-# --------------------------
+# -----------------------------------------------------
 @app.route("/admin_dashboard")
 def admin_dashboard():
     if "admin" not in session:
@@ -157,18 +145,16 @@ def admin_dashboard():
                            registrations=registrations,
                            search_query=search_query)
 
-
-# --------------------------
+# -----------------------------------------------------
 # Download Abstract
-# --------------------------
+# -----------------------------------------------------
 @app.route("/download/<filename>")
 def download_file(filename):
     return send_from_directory(app.config["UPLOAD_FOLDER"], filename, as_attachment=True)
 
-
-# --------------------------
+# -----------------------------------------------------
 # Export CSV
-# --------------------------
+# -----------------------------------------------------
 @app.route("/export_csv")
 def export_csv():
     if "admin" not in session:
@@ -178,7 +164,7 @@ def export_csv():
 
     output = StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Team Name", "Leader", "Email", "Phone", "Members", "Abstract File", "Timestamp"])
+    writer.writerow(["Team Name", "Leader", "Email", "Phone", "Members", "Payment Screenshot", "Abstract File", "Timestamp"])
 
     for r in registrations:
         writer.writerow([
@@ -187,6 +173,7 @@ def export_csv():
             r.email,
             r.phone,
             r.members,
+            r.payment_screenshot,
             r.abstract_file,
             r.timestamp
         ])
@@ -199,9 +186,8 @@ def export_csv():
         download_name="registrations.csv"
     )
 
-
-# --------------------------
+# -----------------------------------------------------
 # Run App
-# --------------------------
+# -----------------------------------------------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
