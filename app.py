@@ -1,4 +1,5 @@
 import os
+import psycopg   # ✅ Added as requested (new PostgreSQL driver)
 from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory, send_file
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
@@ -32,6 +33,9 @@ db = SQLAlchemy(app)
 UPLOAD_FOLDER = "abstracts"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+# Ensure payment upload directory exists
+os.makedirs("static/uploads", exist_ok=True)
 
 
 # --------------------------
@@ -77,7 +81,7 @@ def register():
         # Upload payment screenshot
         payment_file = request.files["payment_screenshot"]
         payment_filename = None
-        if payment_file:
+        if payment_file and payment_file.filename != "":
             payment_filename = secure_filename(payment_file.filename)
             payment_file.save(os.path.join("static/uploads", payment_filename))
 
