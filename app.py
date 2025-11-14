@@ -1,11 +1,11 @@
 import os
-import psycopg   # ✅ Added as requested (new PostgreSQL driver)
 from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory, send_file
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 import csv
 from io import StringIO
 from datetime import datetime
+
 
 # --------------------------
 # Flask Setup
