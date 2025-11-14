@@ -1,166 +1,186 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, send_file, session, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
+from datetime import datetime
 
+# ---------------------------------------------------------
+# Flask Setup
+# ---------------------------------------------------------
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
-# ============================================================
-# 🟦 Persistent SQLite Database (Render free tier safe)
-# ============================================================
-DB_PATH = "data/registrations.db"          # CHANGED HERE
-os.makedirs("data", exist_ok=True)         # CHANGED HERE
+# ---------------------------------------------------------
+# SECURE SQLITE PATH FOR RENDER
+# ---------------------------------------------------------
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "data")   # inside project folder
+os.makedirs(DATA_DIR, exist_ok=True)
+
+DB_PATH = os.path.join(DATA_DIR, "registrations.db")
 
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DB_PATH}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
-# ============================================================
-# 🟦 Database Model
-# ============================================================
+
+# ---------------------------------------------------------
+# DATABASE MODEL
+# ---------------------------------------------------------
 class Registration(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    team_name = db.Column(db.String(100))
-    leader_name = db.Column(db.String(100))
-    leader_email = db.Column(db.String(100))
-    leader_phone = db.Column(db.String(20))
-    leader_company = db.Column(db.String(200))
+    team_name = db.Column(db.String(200), nullable=False)
+    team_leader = db.Column(db.String(200), nullable=False)
+    email = db.Column(db.String(200), nullable=False)
+    phone = db.Column(db.String(20), nullable=False)
+    college = db.Column(db.String(200), nullable=False)
+    members = db.Column(db.String(500), nullable=False)
+    idea = db.Column(db.String(500), nullable=False)
+    abstract_filename = db.Column(db.String(300))
+    payment_screenshot = db.Column(db.String(300))
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-    team_size = db.Column(db.Integer)
 
-    members = db.Column(db.Text)
-    abstract_path = db.Column(db.String(200))
-    agree_terms = db.Column(db.Boolean, default=False)
-
+# ---------------------------------------------------------
+# Initialize DB
+# ---------------------------------------------------------
 with app.app_context():
     db.create_all()
 
-# ============================================================
+
+# ---------------------------------------------------------
 # ROUTES
-# ============================================================
+# ---------------------------------------------------------
 
 @app.route("/")
 def home():
     return render_template("home.html")
 
-
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
+        team_name = request.form["team_name"]
+        team_leader = request.form["team_leader"]
+        email = request.form["email"]
+        phone = request.form["phone"]
+        college = request.form["college"]
+        members = request.form["members"]
+        idea = request.form["idea"]
 
-        team_name = request.form.get("team_name")
-        leader_name = request.form.get("leader_name")
-        leader_email = request.form.get("leader_email")
-        leader_phone = request.form.get("leader_phone")
-        leader_company = request.form.get("leader_company")
-        team_size = int(request.form.get("team_size"))
-        agree_terms = request.form.get("agree_terms") == "on"
-
-        members_list = []
-        for i in range(1, team_size):
-            members_list.append({
-                "name": request.form.get(f"member_{i}_name"),
-                "email": request.form.get(f"member_{i}_email"),
-                "phone": request.form.get(f"member_{i}_phone"),
-                "company": request.form.get(f"member_{i}_company")
-            })
-
-        abstract_file = request.files["abstract"]
-        filename = secure_filename(abstract_file.filename)
-
-        upload_folder = "uploads"
+        # File Upload Path
+        upload_folder = os.path.join(BASE_DIR, "uploads")
         os.makedirs(upload_folder, exist_ok=True)
 
-        abstract_path = os.path.join(upload_folder, filename)
-        abstract_file.save(abstract_path)
+        abstract_file = request.files.get("abstract")
+        payment_file = request.files.get("payment")
 
-        new_reg = Registration(
+        abstract_filename = None
+        payment_filename = None
+
+        if abstract_file:
+            abstract_filename = secure_filename(abstract_file.filename)
+            abstract_file.save(os.path.join(upload_folder, abstract_filename))
+
+        if payment_file:
+            payment_filename = secure_filename(payment_file.filename)
+            payment_file.save(os.path.join(upload_folder, payment_filename))
+
+        entry = Registration(
             team_name=team_name,
-            leader_name=leader_name,
-            leader_email=leader_email,
-            leader_phone=leader_phone,
-            leader_company=leader_company,
-            team_size=team_size,
-            members=str(members_list),
-            abstract_path=abstract_path,
-            agree_terms=agree_terms
+            team_leader=team_leader,
+            email=email,
+            phone=phone,
+            college=college,
+            members=members,
+            idea=idea,
+            abstract_filename=abstract_filename,
+            payment_screenshot=payment_filename,
         )
-
-        db.session.add(new_reg)
+        db.session.add(entry)
         db.session.commit()
-
-        return redirect(url_for("registration_success"))
+        return render_template("registration_success.html")
 
     return render_template("register.html")
 
 
-@app.route("/registration_success")
-def registration_success():
-    return render_template("registration_success.html")
-
-
-# ============================================================
+# ---------------------------------------------------------
 # ADMIN LOGIN
-# ============================================================
-
-ADMIN_EMAIL = "admin@origin.com"
-ADMIN_PASSWORD = "admin123"
+# ---------------------------------------------------------
+ADMIN_USER = "admin"
+ADMIN_PASS = "admin123"
 
 @app.route("/admin_login", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
-        email = request.form.get("email")
-        password = request.form.get("password")
+        username = request.form["username"]
+        password = request.form["password"]
 
-        if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
-            session["admin_logged_in"] = True
+        if username == ADMIN_USER and password == ADMIN_PASS:
+            session["admin"] = True
             return redirect(url_for("admin_dashboard"))
-
-        flash("Invalid credentials", "error")
+        else:
+            flash("Invalid credentials!")
 
     return render_template("admin_login.html")
 
 
-# ============================================================
+# ---------------------------------------------------------
 # ADMIN DASHBOARD
-# ============================================================
-
+# ---------------------------------------------------------
 @app.route("/admin_dashboard")
 def admin_dashboard():
-    if not session.get("admin_logged_in"):
+    if "admin" not in session:
         return redirect(url_for("admin_login"))
 
-    regs = Registration.query.all()
-    total = len(regs)
+    all_regs = Registration.query.all()
+    count = len(all_regs)
 
-    return render_template("admin_dashboard.html",
-                           registrations=regs,
-                           total=total)
+    return render_template("admin_dashboard.html", registrations=all_regs, count=count)
 
 
-@app.route("/download_csv")
-def download_csv():
-    if not session.get("admin_logged_in"):
+# ---------------------------------------------------------
+# CSV EXPORT
+# ---------------------------------------------------------
+import csv
+
+@app.route("/export_csv")
+def export_csv():
+    if "admin" not in session:
         return redirect(url_for("admin_login"))
 
-    filepath = "registrations.csv"
+    export_path = os.path.join(BASE_DIR, "registrations_export.csv")
 
-    with open(filepath, "w") as f:
-        f.write("Team Name,Leader Name,Email,Phone,Team Size,Members,Abstract\n")
-        for r in Registration.query.all():
-            f.write(f"{r.team_name},{r.leader_name},{r.leader_email},"
-                    f"{r.leader_phone},{r.team_size},\"{r.members}\",{r.abstract_path}\n")
+    all_regs = Registration.query.all()
 
-    return send_file(filepath, as_attachment=True)
+    with open(export_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            "ID", "Team Name", "Leader", "Email", "Phone",
+            "College", "Members", "Idea", "Abstract", "Payment", "Timestamp"
+        ])
+
+        for r in all_regs:
+            writer.writerow([
+                r.id, r.team_name, r.team_leader, r.email, r.phone,
+                r.college, r.members, r.idea, r.abstract_filename,
+                r.payment_screenshot, r.timestamp
+            ])
+
+    return send_file(export_path, as_attachment=True)
 
 
+# ---------------------------------------------------------
+# LOGOUT
+# ---------------------------------------------------------
 @app.route("/logout")
 def logout():
-    session.pop("admin_logged_in", None)
+    session.pop("admin", None)
     return redirect(url_for("admin_login"))
 
 
+# ---------------------------------------------------------
+# MAIN
+# ---------------------------------------------------------
 if __name__ == "__main__":
     app.run(debug=True)
