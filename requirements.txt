@@ -1,6 +1,6 @@
 Flask==2.3.3
-Flask_SQLAlchemy==3.0.5
+Flask_SQLAlchemy==2.5.1
 psycopg2-binary==2.9.7
 python-dotenv==1.0.0
 gunicorn==20.1.0
-SQLAlchemy==2.0.23
+SQLAlchemy==1.4.46
