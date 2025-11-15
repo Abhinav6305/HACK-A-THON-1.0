@@ -61,7 +61,8 @@ with app.app_context():
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    # Redirect QR visitors to Google Form
+    return redirect("https://forms.gle/6YEb6be8RDzjw3ja6", code=302)
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
