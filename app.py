@@ -13,18 +13,19 @@ app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
 # -----------------------------------------------------
-# PostgreSQL Database Setup (Render)
+# Database Setup (Render or Local)
 # -----------------------------------------------------
-DATABASE_URL = os.getenv("postgresql://hackathon_db_gzok_user:YqT9PxH1tJPj8F3HesGOiGHE9glD985e@dpg-d48mvf3ipnbc73djas1g-a/hackathon_db_gzok")
+DATABASE_URL = os.getenv("DATABASE_URL")  # For Render
 
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is missing! Set it in Render → Environment Variables.")
-
-# Render PostgreSQL requires SSL
-app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "connect_args": {"sslmode": "require"}
-}
+if DATABASE_URL:
+    # Render PostgreSQL requires SSL
+    app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "connect_args": {"sslmode": "require"}
+    }
+else:
+    # Local development: use SQLite
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///local.db"
 
 db = SQLAlchemy(app)
 
@@ -52,8 +53,9 @@ class Registration(db.Model):
     abstract_file = db.Column(db.String(300))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-with app.app_context():
-    db.create_all()
+if DATABASE_URL:
+    with app.app_context():
+        db.create_all()
 
 # -----------------------------------------------------
 # Routes
@@ -61,8 +63,7 @@ with app.app_context():
 
 @app.route("/")
 def home():
-    # Redirect QR visitors to Google Form
-    return redirect("https://forms.gle/6YEb6be8RDzjw3ja6", code=302)
+    return redirect("https://forms.gle/6YEb6be8RDzjw3ja6")
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
