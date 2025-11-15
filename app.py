@@ -53,9 +53,7 @@ class Registration(db.Model):
     abstract_file = db.Column(db.String(300))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-if DATABASE_URL:
-    with app.app_context():
-        db.create_all()
+# Database initialization is handled in the app context when needed
 
 # -----------------------------------------------------
 # Routes
